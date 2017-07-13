@@ -1,0 +1,26 @@
+#!/bin/bash
+function error {
+    echo
+    echo 'FAIL!'
+    echo
+    exit 1
+    }
+
+function check {
+    if [ $? -ne 0 ]
+    then
+	error
+    fi
+}
+
+rm -f fort.*
+
+./mk
+check
+./mhd
+check
+diff eostab.dat eostab.orig_rel
+check
+echo
+echo '******* SUCCESS *******'
+echo

@@ -1,0 +1,124 @@
+c----------------- commons for MHD master prog ---------------------------
+      double precision nlev
+c
+      common /atoms /
+     .                         abun  (mchem ),        atwt  (mchem ),
+     .                         nion  (mchem ),
+     .                         name  (mchem ),        nucz  (mchem )
+      common /const /
+     .                                camu   ,               cc     ,
+     .                                ce     ,               ch     ,
+     .                                ck     ,               cme    ,
+     .                                cpi    ,               cevw   ,
+     .                                ceta   ,               cf4    ,
+     .                                cx     ,               carad
+      common /degen /
+     .                                eta    ,               detdn  ,
+     .                                detdt  ,               detdv  ,
+     .                                d2etdn2,               d2etdnt,
+     .                                d2etdnv,               d2etdt2,
+     .                                d2etdtv,               d2etdv2,
+     .                                exeta  ,               thet   ,
+     .                                dthet  ,               d2thet ,
+     .                         fd    (mfd   )
+      common /free  /
+     .                         e     (mfe   ),        p     (mfe   ),
+     .                         f     (mfe   ),               d2fdt2 ,
+     .                                d2fdtv ,               d2fdv2 ,
+     .                         fscr  (mspes ),        dfdn  (mspes ),
+     .                         d2fdnt(mspes ),        d2fdnv(mspes ),
+     .                 d2fdn2( mspes ,mspes )
+      common /gas   /
+     .                                totn   ,               fgas   ,
+     .                                pgas   ,               egas   ,
+     .                                pe     ,               gasmu
+      common /head  /
+     .                                jobdat ,               jobtim ,
+     .                         hdr   (  10  )
+      common /io    /
+     .                                iin    ,               iout   ,
+     .                                ipunch ,               ifracs ,
+     .                                ipops  ,               idat
+ 
+      common /map   /
+     .                                nchem  ,               nspes  ,
+     .                                npf    ,               ish2   ,
+     .                                ish2p  ,               ishm   ,
+     .                                ish    ,               ispr   ,
+     .                                ise    ,        kz    (mz    ),
+     .                         ichm1 (mchem ),        ichm2 (mchem ),
+     .                         jspes (mspes ),        jpf   (mpf   ),
+     .                         kspes (mspes ),        kpf   (mpf   ),
+     .                  ispes (mion  ,mchem ), ipf   (mion  ,mchem )
+      common /metal /
+     .                                abunm  ,               chim   ,
+     .                                phim
+      common /mtrx  /
+     .                                dfmax  ,               dnmax  ,
+     .                         df    (mspes ),        dn    (mspes ),
+     .                         wwt   (mspes ),        xfrac (mspes ),
+     .                  a     (mspes ,mspes ), b     (mlam  ,mspes ),
+     .                         iwin1 (mchem ),        iwin2 (mchem ),
+     .                                idfmax ,               idnmax ,
+     .                                floor  ,               nlam
+      common /names /
+     .                                pdnp   ,               pdnl
+      common /pfdat /
+     .                         nlev  (mpf   ),
+     .                  elev  (mlev  ,mpf   ), stwt  (mlev  ,mpf   ),
+     .                  rad   (mlev  ,mpf   ), chi   (mlev  ,mpf   )
+      common /pfdats/
+     .                  CHISP (MLEV  ,MSPES ), ELEVSP(MLEV  ,MSPES ),
+     .                  RADSP (MLEV  ,MSPES ), STWTSP(MLEV  ,MSPES ),
+     .                  NLEVSP       (MSPES )
+      common /pfun  /
+     .                         w     (mlev  ),        wln   (mlev  ),
+     .                         wscr  (mlev  ), dlnwdn(mlev  ,mspes ),
+     .                         dlnpdn(mspes ),
+     .                         z     (mspes ),        dzdn  (mspes ),
+     .                         d2zdnt(mspes ),        d2zdnv(mspes ),
+     .                  d2zdn2(mspes ,mspes ), ekt   (mlev  ,mpf   )
+      common /saha  /
+     .                                elec   ,
+     .                         ss    (mchem ),        dssde (mchem ),
+     .                  sphi  (mion  ,mchem ), sr    (mion  ,mchem ),
+     .                  sp    (mion  ,mchem ), dspde (mion  ,mchem ),
+     .                  sf    (mion  ,mchem ), dsfde (mion  ,mchem )
+      common /spes  /
+     .                         smass (mspes ),        gs    (mspes ),
+     .                         zs    (mspes ),        zsq   (mspes ),
+     .                         zmask (mspes ),        sn    (mspes ),
+     .                         e0    (mspes ),        g0    (mspes ),
+     .                         rad0  (mspes ),        chi0  (mspes ),
+     .                  frac  (mion  ,mz    ), fraco (mion  ,mz    ),
+     .                  fracx (mion  ,mz    )                       ,
+     .                  snis  (mspes ,mrho  ), wwis  (mspes ,mrho  ),
+     .                  iwis1 (mchem ,mrho  ), iwis2 (mchem ,mrho  )
+      common /table /
+     .                                rhomin ,               drho   ,
+     .                                rholog ,               rho    ,
+     .                                tmin   ,               dt     ,
+     .                                ddr    ,               ddt    ,
+     .                                tlog   ,               t      ,
+     .                                nrho   ,               irho   ,
+     .                                nt     ,               it     ,
+     .                                iloop  ,               inext  ,
+     .                                vol    ,        elog  (mrho  ),
+     .                         pglog (mrho  ),        pelog (mrho  ),
+     .                         snm   (mrho  ),        sne   (mrho  ),
+     .                         csubv (mrho  ),        csubp (mrho  ),
+     .                         chirho(mrho  ),        chit  (mrho  ),
+     .                         gam1  (mrho  ),        gam2  (mrho  ),
+     .                         gam3  (mrho  ),        qadb  (mrho  ),
+     .                         ptlog (mrho  ),        etlog (mrho  ),
+     .                         elpun (mrho  ),        etapun(mrho  ),
+     .                         elrpun(mrho  ),        eltpun(mrho  ),
+     .                         tnpun (mrho  ),        frapun(4,mrho),
+     .                         varspc(mvspc,mrho)
+c
+      common /keep/            snkeep(mspes ),        wwkeep(mspes ),
+     .                         iwin1k(mchem ),        iwin2k(mchem ),
+     .                         ifail         ,        ifailt        ,
+     .                         ihsc          ,        ihesc         ,
+     .                         it1st         ,        ieldir
+

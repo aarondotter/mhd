@@ -1,0 +1,21 @@
+c----------------- parameters for MHD master prog ----------------------
+            parameter ( mchem =  15, mspes = 205 )
+            parameter ( mz     = 26, mion  = mz + 1 )
+            parameter ( mpf   = 200, mlev  = 500 )
+c-----------------------------------------------------------------------
+c               note that mz has to be 8 minimum, since the
+c               variable 'frac' (in the fmin code) carries
+c               not only the 'ionization' fractions of hydrogen
+c               in its first row, but also (as frac(mion,1) down
+c               to frac(mion-3)) other information: electron number,
+c               total number, log t and log rho. This usage of
+c               frac had never been a very bright idea, which slipped 
+c               through in programs for sufficient memory resources.
+c-----------------------------------------------------------------------
+      parameter ( mvspc = 2 )
+      parameter ( mrho  = 101, mfe   =   4, mfd    =  5)
+      parameter ( mlam  = mspes - mchem -1 )
+      parameter ( mmap  = mchem * ( 2*mion + 2 ) + 2 * ( mspes + mpf )
+     .                                + mz + 9 )
+      parameter ( mpfdat = mpf * (4*mlev + 1) )
+      parameter ( mspdat = 10 * mspes )
