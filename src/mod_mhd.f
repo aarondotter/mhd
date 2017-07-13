@@ -1803,6 +1803,7 @@ c
           snelec = max( sdot( nscale, zs, 1, sn, 1 ), 1.0d-70 )
       else
           nscale = nspes
+          snelec = -1.0d-70
       end if
 c
 c ........................................................................
