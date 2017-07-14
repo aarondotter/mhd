@@ -1,1 +1,2 @@
-./clean; ./mhd.exe
+#!/bin/bash
+./clean; ./mhd.exe $1
