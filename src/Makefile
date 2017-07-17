@@ -14,9 +14,14 @@ $(LIB): $(LIB_OBJS)
 test: test_MHD.o $(LIB)
 	$(FC) -o ../mhd.exe $^
 
-all: test
+table: table.o $(LIB)
+	$(FC) -o ../table $^
+
+all: test table
 
 test_MHD.o: $(LIB)
+
+table.o: $(LIB)
 
 %.o: %.f
 	$(FC) $(FLAGS) -c $<

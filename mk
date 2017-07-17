@@ -1,1 +1,1 @@
-cd src; make test
+cd src; make  all

@@ -1,15 +1,9 @@
 program test_MHD
   use MHDeos
-
+  
   implicit none
-
-  logical, parameter :: do_test = .true.
-
-  if(do_test) then
-     call test
-  else
-     call table_for_Bill
-  endif
+  
+  call test
   
 contains
 
@@ -49,63 +43,7 @@ contains
     close(io)
 
   end subroutine test
-
-  
-  subroutine table_for_Bill
-    integer, parameter :: nmax=1000 !set by MHD commons
-    double precision, allocatable :: logT(:), logRho(:), logQ(:) ! (nt)
-    double precision, allocatable :: res(:,:) !(nt,nres)
-    double precision :: logT_min, logT_max, logQ_min, logQ_max, dlogT, dlogQ
-    integer :: i, io, j, nlogT, nlogQ, nmid_logT
-    character(len=128) :: abunfile, datafile, outfile
-
-    if(command_argument_count()>0) then
-       call get_command_argument(1,outfile)
-    else
-       outfile = 'eostab2.dat'
-    endif
-    
-    !names of data files for MHD
-    datafile='eosdat07'
-    abunfile='abun2.dat'
-      
-    logT_min = 3.1
-    logT_max = 7.7
-    logQ_min = -5.0
-    logQ_max = 3.0
-      
-    nlogT = 6
-    nlogQ = 3
-    nmid_logT = nlogT/2
-
-    allocate(logT(nlogT*nlogQ), logQ(nlogT*nlogQ), logRho(nlogT*nlogQ))
-    allocate(res(nlogT*nlogQ, nres))
-      
-    dlogT = (logT_max - logT_min)/dble(nlogT - 1)
-    dlogQ = (logQ_max - logQ_min)/dble(nlogQ - 1)
-
-    do i=1,nlogT
-       do j=1,nlogQ
-          logT((i-1)*nlogQ + j) = logT_min + dlogT*dble(i-1)
-          logQ((i-1)*nlogQ + j) = logQ_min + dlogQ*dble(j-1)
-       enddo
-    enddo
-    
-    logRho = logQ + 2d0*logT - 12.0d0
-        
-    !read in data files
-    call mhd_init(datafile,abunfile)
-
-    !process T,Rho arrays through MHD
-    call eosDT_get( logT, logRho, res)
-
-    io = 22 !unit for output table
-    open( unit=io , file=trim(outfile))
-    call write_result(io,logT,res)      
-    close(io)
  
-  end subroutine table_for_Bill
-
   
   subroutine write_result(io,tl,res)
     integer, intent(in) :: io
