@@ -1,76 +1,93 @@
 program table
   use MHDeos
-  
+
   implicit none
-  
+
   call table_for_Bill
-  
+
 contains
-  
+
+
   subroutine table_for_Bill
     integer, parameter :: nmax=1000 !set by MHD commons
-    double precision, allocatable :: logT(:), logRho(:), logQ(:) ! (nt)
+    double precision, allocatable :: logTs(:), logRhos(:) ! (nt)
     double precision, allocatable :: res(:,:) !(nt,nres)
-    double precision :: logT_min, logT_max, logQ_min, logQ_max, dlogT, dlogQ
-    integer :: i, io, j, nlogT, nlogQ, nmid_logT
+    double precision :: logT, logRho_min, logRho_max, dlogRho
+    integer :: io, j, n
     character(len=128) :: abunfile, datafile, outfile
 
-    if(command_argument_count()>0) then
-       call get_command_argument(1,outfile)
-    else
-       outfile = 'eostab2.dat'
-    endif
-    
+
+    logRho_min = -15.0  
+    logRho_max = 3.2
+    logT = 2.9
+    n = 3
+
+
+    ! abun_z_0.0, abun_z_0.02, abun_z_0.2, abun_z_0.4, abun_z_0.5, abun_z_0.6
+
+    ! logT = 7.7, logRho_min = -15, logRho_max = 3.2
+    ! logT = 6.0, logRho_min = -15, logRho_max = 3.2
+
+    ! logT = 5.9, logRho_min = -15, logRho_max = 1.2
+    ! logT = 3.6, logRho_min = -15, logRho_max = 1.2
+
+    ! logT = 3.5, logRho_min = -15, logRho_max = -1.2
+    ! logT = 2.9, logRho_min = -15, logRho_max = -1.2
+
+
+    ! abun_z_0.7, abun_z_1.0
+
+    ! logT = 7.7, logRho_min = -15, logRho_max = 3.2
+    ! logT = 6.0, logRho_min = -15, logRho_max = 3.2
+
+    ! logT = 5.9, logRho_min = -15, logRho_max = 0.1
+    ! logT = 3.6, logRho_min = -15, logRho_max = 0.1
+
+    ! logT = 3.5, logRho_min = -15, logRho_max = -1.2
+    ! logT = 2.9, logRho_min = -15, logRho_max = -1.2
+
+
     !names of data files for MHD
     datafile='eosdat07'
-    abunfile='abun.dat'
-      
-    logT_min = 6.0d0
-    logT_max = 6.0d0
-    logQ_min = -5.4666668574015302
-    logQ_max = -5.4666668574015302
-    
-    nlogT = 1
-    nlogQ = 1
-    nmid_logT = nlogT/2
+    abunfile='abun_z_0.02.dat'
+    outfile = 'eostab2.dat'
 
-    dlogT = 0.0d0
-    dlogQ = 0.0d0
-    
-    allocate(logT(nlogT*nlogQ), logQ(nlogT*nlogQ), logRho(nlogT*nlogQ))
-    allocate(res(nlogT*nlogQ, nres))
+    dlogRho = (logRho_max - logRho_min)/dble(n - 1)
+    write(*,*) 'logRho_min', logRho_min
+    write(*,*) 'logRho_max', logRho_max
+    write(*,*) 'dlogRho', dlogRho
 
-    if(nlogT > 1)then
-       dlogT = (logT_max - logT_min)/dble(nlogT - 1)
-    else
-       dlogT = 0.0d0
-    endif
-    if(nlogQ > 1)then
-       dlogQ = (logQ_max - logQ_min)/dble(nlogQ - 1)
-    else
-       dlogT = 0.0d0
-    endif
+    allocate(logTs(n), logRhos(n))
+    allocate(res(n, nres))
 
-    do i=1,nlogT
-       do j=1,nlogQ
-          logT((i-1)*nlogQ + j) = logT_min + dlogT*dble(i-1)
-          logQ((i-1)*nlogQ + j) = logQ_min + dlogQ*dble(j-1)
-       enddo
+    logTs(1:n) = logT
+    do j=1,n
+       logRhos(j) = logRho_min + dble(j-1)*dlogRho
+       write(*,*) 'logRhos(j)', j, logRhos(j)
     enddo
-    
-    logRho = logQ + 2d0*logT - 12.0d0
-        
+
+    write(*,*) 'read in data files'
     !read in data files
     call mhd_init(datafile,abunfile)
 
+    write(*,*) 'process T,Rho arrays through MHD'
     !process T,Rho arrays through MHD
-    call eosDT_get( logT, logRho, res)
+    call eosDT_get( logTs, logRhos, res)
 
+    write(*,*) 'write results', trim(outfile)
     io = 22 !unit for output table
     open( unit=io , file=trim(outfile))
-    call write_result(io,logT,res)      
+    call write_result(io,logTs,res)      
     close(io)
- 
+
+    write(*,*)
+    do j=1,n
+       write(*,*) 'logRhos(j)', j, logRhos(j)
+    enddo
+    write(*,*) 'logT', logT
+    write(*,*)
+
   end subroutine table_for_Bill
+
 
 end program table

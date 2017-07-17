@@ -5,7 +5,7 @@ c---------------------------------------------------------------------
 
       implicit double precision (a-h,o-z), integer (i-n)
 
-      integer, parameter :: nres=20
+      integer, parameter :: nres=25
 
       private
 
@@ -38,10 +38,13 @@ c---------------------------------------------------------------------
       integer, intent(in) :: io
       double precision, intent(in) :: tl(:), res(:,:)
       integer :: i,n
+      
       write(io,'(99a16)') 'logT','logRho', 'entropy', 'logE', 
      > 'chiRho', 'chiT', 'dlogE_dlogRho', 'dlogE_dlogT', 'grad_ad', 
      > 'Cp', 'Cv', 'Gamma_1', 'Gamma_2', 'Gamma_3', 'f_H+', 'f_He+', 
-     > 'f_He++', 'f_H2', 'eta', 'logPrad', 'logPgas'
+     > 'f_He++', 'f_H2', 'eta', 'logPrad', 'logPgas', 'n_e', 'n_ion',
+     > 'mu_e', 'mu'
+
       n=size(tl)
       do i=1,n
          write(io,'(1p99e16.8)') tl(i), res(i,:)
@@ -191,7 +194,6 @@ c
       read(ipunch) nchem,(atwt(ic),abun(ic),ic=1,nchem),gasmu
       
       read ( ipunch, iostat = ier ) nt, nr, drho, ddt, ddr
-
 c======================================================================
       call rpun(nt2,nr2,drho,ddt,ddr)
 c======================================================================
@@ -254,6 +256,9 @@ c
       subroutine rpun1(n,nrho,var,tl,ntm,nrm,ivar1,drho,ddt,ddr)
       include 'parms'
       include 'tabparms'
+
+      double precision :: mu, muinv, mu_e, mu_i, ne, nion
+      
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
       dimension var(ntm,nrm,ivar1),tl(ntm)
@@ -270,6 +275,7 @@ c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       umod   = log(10.d0)
       carad = 7.56567d-15
+      camu = 1.6605655d-24
 c
       tlog = tlg(2)
       T = exp(umod*tlog)
@@ -285,10 +291,21 @@ c
 c     
 c............ quantities for table ................
 c
-         dg1dlr      = (gm1(m,3) - gm1(m,1))/(2.d0*ddr)
-         dg1dlt      = (gm1(m,5) - gm1(m,4))/(2.d0*ddt)
-         var(n,m, 1) = rhomin(2) + dfloat(m-1)*drho
-         !var(n,m, 2) = ptlg(m,2)
+         etot        = varspc(1,m,2)
+         ftot        = varspc(2,m,2)
+         prr         = carad*T*T*T*T/3.0d0
+         rhol = rhomin(2) + dfloat(m-1)*drho
+         rho = exp(umod*rhol)
+         
+         ne = varspc(3,m,2)
+         nion = varspc(4,m,2)
+         mu_e = rho/camu/ne
+         mu_i = rho/camu/nion
+         muinv = (1.0d0/mu_i + 1.0d0/mu_e)
+         mu = 1.0d0/muinv
+
+         var(n,m, 1) = rhol
+         var(n,m, 2) = varspc(5,m,2)
          var(n,m, 3) = etlg(m,2)
          var(n,m, 4) = chirh(m,2)
          var(n,m, 5) = cht(m,2)
@@ -296,33 +313,22 @@ c
          var(n,m, 7) =(etlg(m,5) - etlg(m,4))/(2.d0*ddt)
          var(n,m, 8) = 1.d0 - 1.d0/gm2(m,2)
          var(n,m, 9) = csbp(m,2)
-
-     
+         var(n,m,10) = csbv(m,2)
+         var(n,m,11) = gm1(m,2)
+         var(n,m,12) = gm2(m,2)
+         var(n,m,13) = gm3(m,2)
          var(n,m,14) = frp1(m,2)
          var(n,m,15) = frp2(m,2)
          var(n,m,16) = frp3(m,2)
          var(n,m,17) = frp4(m,2)
          var(n,m,18) = etapun(m,2)
-         prr         = carad*T*T*T*T/3.0d0
-         !prr          =10.d0**ptlg(m,2)-10.d0**pglg(m,2)
          var(n,m,19) = prr
          var(n,m,20) = pglg(m,2)
-
-         etot        = varspc(1,m,2)
-         ftot        = varspc(2,m,2)
-         stot        = (etot - ftot)/T
-         var(n,m, 2) = stot
-
-         csubv       = csbv(m,2)
-         gam2        = gm2(m,2)
-         gam3        = gm3(m,2)
-         qadb        = qdb(m,2)
-         gam1        = gm1(m,2)
-
-         var(n,m,10) = csubv
-         var(n,m,11) = gam1
-         var(n,m,12) = gam2
-         var(n,m,13) = gam3
+         var(n,m,21) = ne
+         var(n,m,22) = nion
+         var(n,m,23) = mu_e
+         var(n,m,24) = mu
+         var(n,m,25) = 0.0d0
       enddo
 
       return
@@ -701,11 +707,11 @@ c-----------------------------------------------------------------------
 c     add radiation terms where needed                                 c
 c-----------------------------------------------------------------------
 c
-      d2fdt2 = d2fdt2 - 4.00000000000000 d0 * carad * t**2 * vol
-      d2fdtv = d2fdtv - 1.33333333333333 d0 * carad * t**3
-      ptot   = pgas   + 0.33333333333333 d0 * carad * t**4
-      etot   = egas   + 1.00000000000000 d0 * carad * t**4 * vol
-      ftot   = fgas   - 0.33333333333333 d0 * carad * t**4 * vol
+      d2fdt2 = d2fdt2 - 4.00000000000000 d0 * carad * t*t * vol
+      d2fdtv = d2fdtv - 1.33333333333333 d0 * carad * t*t*t
+      ptot   = pgas   + 0.33333333333333 d0 * carad * t*t*t*t
+      etot   = egas   + 1.00000000000000 d0 * carad * t*t*t*t * vol
+      ftot   = fgas   - 0.33333333333333 d0 * carad * t*t*t*t * vol
       ptlog(irho) = log10( ptot )
       etlog(irho) = log10( etot )
 c
@@ -715,60 +721,54 @@ c     reaction parameters                                              c
 c-----------------------------------------------------------------------
 c
 c     first zero storage
-      do 4 ilam = 1, mlam
-      fscr  (ilam) = 0.0d0
-      d2fdlt(ilam) = 0.0d0
-      d2fdlv(ilam) = 0.0d0
-      dnedl(ilam)  = 0.0d0
-      do 3 jlam = 1, mlam
-      d2fdl2(ilam, jlam) = 0.0d0
-    3 continue
-    4 continue
-      do 6 is = 1, mspes
-      dnedni(is) = 0.0d0
-      do 5 js = 1, mspes
-      a(is, js) = 0.0d0
-    5 continue
-    6 continue
+      fscr = 0.0d0
+      d2fdlt = 0.0d0
+      d2fdlv = 0.0d0
+      d2fdl2 = 0.0d0
+      dnedni = 0.0d0
+      a = 0.0d0
+      
 c
 c-----------------------------------------------------------------------
 c     ignore d2f/dlam dt, etc for case of no reaction parameters       c
 c-----------------------------------------------------------------------
 c
-      if ( nlam .le. 0 ) go to 9
+      if ( nlam > 0 ) then
 c
 c     d2f/dlam dt = b * d2f/dn dt
-      call smv( nlam, nspes, b, mlam, d2fdnt, d2fdlt )
+         call smv( nlam, nspes, b, mlam, d2fdnt, d2fdlt )
 c
 c     d2f/dlam dv = b * d2f/dn dv
-      call smv( nlam, nspes, b, mlam, d2fdnv, d2fdlv )
+         call smv( nlam, nspes, b, mlam, d2fdnv, d2fdlv )
 c
 c     dne/dlam = b * dne/dn
-      dnedni(ise) = 1.0d0
-      call smv( nlam, nspes, b, mlam, dnedni, dnedl )
+         dnedni(ise) = 1.0d0
+         call smv( nlam, nspes, b, mlam, dnedni, dnedl )
 c
 c     form d2f/dn2 * b(transpose); store temporarily in matrix a
-      call smmtr( nspes, nspes, nlam, d2fdn2, mspes, b, mlam, a, mspes)
+         call smmtr(nspes,nspes,nlam,d2fdn2,mspes,b,mlam,a,mspes)
 c
 c     d2f/dlam2 = b * d2f/dn2 * b(transpose)
-      call smm( nlam, nspes, nlam, b, mlam, a, mspes, d2fdl2, mlam)
+         call smm( nlam, nspes, nlam, b, mlam, a, mspes, d2fdl2, mlam)
 c
 c======================================================================
 c     MACHINE-DEPENDENT LINEAR EQUATION SOLVER
 c======================================================================
-      mdim = mlam
-      call solvth(d2fdlt,d2fdlv,d2fdl2,res2,mdim)
+         mdim = mlam
+         call solvth(d2fdlt,d2fdlv,d2fdl2,res2,mdim)
 c======================================================================
 c
 c-----------------------------------------------------------------------
 c     c sub v                                                          c
 c-----------------------------------------------------------------------
 c
-      do 8 ilam=1,nlam
-      fscr(ilam)=res2(ilam,1)
-   8  continue
+         do ilam=1,nlam
+            fscr(ilam)=res2(ilam,1)
+         enddo
 c
-   9  csubv(irho) = -t * ( d2fdt2 - sdot(nlam, d2fdlt, 1, fscr, 1) )
+      endif
+      
+      csubv(irho) = -t * ( d2fdt2 - sdot(nlam, d2fdlt, 1, fscr, 1) )
      .                 / ( rho * vol )
 c
 c-----------------------------------------------------------------------
@@ -794,11 +794,8 @@ c-----------------------------------------------------------------------
 c     chi sub rho                                                      c
 c-----------------------------------------------------------------------
 c
-      if ( nlam .le. 0 ) go to 11
-      do 10 ilam=1,nlam
-      fscr(ilam)=res2(ilam,2)
-  10  continue
-  11  chirho(irho) = vol * ( d2fdv2 - sdot(nlam, d2fdlv, 1, fscr, 1) )
+      if ( nlam > 0 ) fscr(1:nlam) = res2(1:nlam,2)
+      chirho(irho) = vol * ( d2fdv2 - sdot(nlam, d2fdlv, 1, fscr, 1) )
      .                   / ptot
 c
 c-----------------------------------------------------------------------
@@ -855,6 +852,9 @@ c ----- additional variables for entropy (or cv,cp) to be put in varspc
 
       varspc(3,irho) = sne(irho)
       varspc(4,irho) = snm(irho)
+
+      varspc(5,irho) = (etot - ftot)/t
+    
       
 cccc  cvspc = rho * csubv(irho) / ( ck * (snm(irho) + sne(irho)) )
 cccc  cpspc = rho * csubp(irho) / ( ck * (snm(irho) + sne(irho)) )

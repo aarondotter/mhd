@@ -1,2 +1,3 @@
-      parameter (nt1m=1,nt2m=1000,nr1m=4,nr2m=21,ivar=20)
+      parameter (nt1m=1,nt2m=1000,nr1m=4,nr2m=21,ivar=25)
 c  ---- careful: check that mrho in 'parms' is .ge. nrm2 !!!
+c ----- careful! check that nres in mod_mhd is .ge. ivar

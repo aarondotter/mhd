@@ -14,20 +14,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     derivatives of f1 wrt to occupation numbers                      c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
-ccc      write(6,*) ' f1 entered'
       ckt = ck * t
       ii = - mspes
 c
-      do 1 is = 1, nspes - 1
-      ii = ii + mspes + 1
+      do is = 1, nspes - 1
+         ii = ii + mspes + 1
 c     use weight wwt to supress species below threshold
-      fscr(is) = - wwt(is) * ckt * ( 1.5d0*log(  t  ) - log( sn(is) )
-     .                                 + log( vol ) + log( gs(is) ) )
-      dfdn  (is) = dfdn  (is) + fscr(is)
-      d2fdnt(is) = d2fdnt(is) + wwt(is) * ( dfdn(is)/t - 1.5d0 * ck )
-      d2fdnv(is) = d2fdnv(is) - wwt(is) * ckt / vol
-      d2fdn2(is,is) = d2fdn2(is,is) + wwt(is) * ckt / sn(is)
-    1 continue
+         fscr(is) = - wwt(is) * ckt * ( 1.5d0*log(  t  ) - log( sn(is) )
+     .              + log( vol ) + log( gs(is) ) )
+         dfdn  (is) = dfdn  (is) + fscr(is)
+         d2fdnt(is) = d2fdnt(is) + wwt(is) * ( dfdn(is)/t - 1.5d0 * ck )
+         d2fdnv(is) = d2fdnv(is) - wwt(is) * ckt / vol
+         d2fdn2(is,is) = d2fdn2(is,is) + wwt(is) * ckt / sn(is)
+      enddo
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     free energy, pressure, internal energy                           c
