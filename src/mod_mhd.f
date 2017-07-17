@@ -5,7 +5,7 @@ c---------------------------------------------------------------------
 
       implicit double precision (a-h,o-z), integer (i-n)
 
-      integer, parameter :: nres=25
+      integer, parameter :: nres=23
 
       private
 
@@ -293,6 +293,8 @@ c............ quantities for table ................
 c
          etot        = varspc(1,m,2)
          ftot        = varspc(2,m,2)
+         stot        = varspc(5,m,2) !entropy
+         sl          = log10(stot)
          prr         = carad*T*T*T*T/3.0d0
          rhol = rhomin(2) + dfloat(m-1)*drho
          rho = exp(umod*rhol)
@@ -304,31 +306,35 @@ c
          muinv = (1.0d0/mu_i + 1.0d0/mu_e)
          mu = 1.0d0/muinv
 
+         dlnS_dlnT = (log10(varspc(5,m,5))-log10(varspc(5,m,4)))
+     >        / (2d0*ddt)
+         dlnS_dlnRho = (log10(varspc(5,m,3))-log10(varspc(5,m,1)))
+     >        / (2d0*ddr)
+
+         
          var(n,m, 1) = rhol
-         var(n,m, 2) = varspc(5,m,2)
+         var(n,m, 2) = pglg(m,2)
          var(n,m, 3) = etlg(m,2)
-         var(n,m, 4) = chirh(m,2)
+         var(n,m, 4) = sl
          var(n,m, 5) = cht(m,2)
-         var(n,m, 6) =(etlg(m,3) - etlg(m,1))/(2.d0*ddr)
-         var(n,m, 7) =(etlg(m,5) - etlg(m,4))/(2.d0*ddt)
-         var(n,m, 8) = 1.d0 - 1.d0/gm2(m,2)
-         var(n,m, 9) = csbp(m,2)
-         var(n,m,10) = csbv(m,2)
-         var(n,m,11) = gm1(m,2)
-         var(n,m,12) = gm2(m,2)
-         var(n,m,13) = gm3(m,2)
-         var(n,m,14) = frp1(m,2)
-         var(n,m,15) = frp2(m,2)
-         var(n,m,16) = frp3(m,2)
-         var(n,m,17) = frp4(m,2)
-         var(n,m,18) = etapun(m,2)
-         var(n,m,19) = prr
-         var(n,m,20) = pglg(m,2)
-         var(n,m,21) = ne
-         var(n,m,22) = nion
-         var(n,m,23) = mu_e
-         var(n,m,24) = mu
-         var(n,m,25) = 0.0d0
+         var(n,m, 6) = chirh(m,2)
+         var(n,m, 7) = 0d0 !d2lnPgas_dlnT_dlnRho
+         var(n,m, 8) = (etlg(m,5) - etlg(m,4))/(2.d0*ddt)
+         var(n,m, 9) = (etlg(m,3) - etlg(m,1))/(2.d0*ddr)
+         var(n,m,10) = 0d0 !d2lnE_dlnT_dlnRho
+         var(n,m,11) = dlnS_dlnT
+         var(n,m,12) = dlnS_dlnRho
+         var(n,m,13) = 0d0 !d2lnS_dlnT_dlnRho
+         var(n,m,14) = mu
+         var(n,m,15) = 0d0 !log_free_e
+         var(n,m,16) = etapun(m,2)
+         var(n,m,17) = frp1(m,2)
+         var(n,m,18) = frp2(m,2)
+         var(n,m,19) = frp3(m,2)
+         var(n,m,20) = frp4(m,2)
+         var(n,m,21) = 0d0      !dse
+         var(n,m,22) = 0d0      !dpe
+         var(n,m,23) = 0d0      !dsp
       enddo
 
       return
@@ -853,7 +859,7 @@ c ----- additional variables for entropy (or cv,cp) to be put in varspc
       varspc(3,irho) = sne(irho)
       varspc(4,irho) = snm(irho)
 
-      varspc(5,irho) = (etot - ftot)/t
+      varspc(5,irho) = (etot - ftot)/t ! entropy
     
       
 cccc  cvspc = rho * csubv(irho) / ( ck * (snm(irho) + sne(irho)) )
