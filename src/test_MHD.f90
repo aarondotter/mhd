@@ -44,19 +44,4 @@ contains
 
   end subroutine test
  
-  
-  subroutine write_result(io,tl,res)
-    integer, intent(in) :: io
-    double precision, intent(in) :: tl(:), res(:,:)
-    integer :: i,n
-    write(io,'(99a16)') 'logT','logRho', 'entropy', 'logE', &
-         'chiRho', 'chiT', 'logE_logRho', 'logE_logT', 'grad_ad', &
-         'Cp', 'Cv', 'Gamma_1', 'Gamma_2', 'Gamma_3', 'f_H+', 'f_He+', &
-         'f_He++', 'f_H2', 'eta', 'logPrad', 'logPgas'
-    n=size(tl)
-    do i=1,n
-       write(io,'(1p99e16.8)') tl(i), res(i,:)
-    enddo
-  end subroutine write_result
-
 end program test_MHD

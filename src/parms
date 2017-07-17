@@ -12,7 +12,7 @@ c               total number, log t and log rho. This usage of
 c               frac had never been a very bright idea, which slipped 
 c               through in programs for sufficient memory resources.
 c-----------------------------------------------------------------------
-      parameter ( mvspc = 2 )
+      parameter ( mvspc = 5 )
       parameter ( mrho  = 101, mfe   =   4, mfd    =  5)
       parameter ( mlam  = mspes - mchem -1 )
       parameter ( mmap  = mchem * ( 2*mion + 2 ) + 2 * ( mspes + mpf )

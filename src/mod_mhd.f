@@ -9,7 +9,7 @@ c---------------------------------------------------------------------
 
       private
 
-      public :: mhd_init, eosDT_get, nres
+      public :: mhd_init, eosDT_get, nres, write_result
       
       contains
 
@@ -34,6 +34,19 @@ c---------------------------------------------------------------------
           
       end subroutine eosDT_get
       
+      subroutine write_result(io,tl,res)
+      integer, intent(in) :: io
+      double precision, intent(in) :: tl(:), res(:,:)
+      integer :: i,n
+      write(io,'(99a16)') 'logT','logRho', 'entropy', 'logE', 
+     > 'chiRho', 'chiT', 'dlogE_dlogRho', 'dlogE_dlogT', 'grad_ad', 
+     > 'Cp', 'Cv', 'Gamma_1', 'Gamma_2', 'Gamma_3', 'f_H+', 'f_He+', 
+     > 'f_He++', 'f_H2', 'eta', 'logPrad', 'logPgas'
+      n=size(tl)
+      do i=1,n
+         write(io,'(1p99e16.8)') tl(i), res(i,:)
+      enddo
+      end subroutine write_result
 
 
       subroutine track(nrho0,logT,logRho)
@@ -595,7 +608,7 @@ c     gas pressure, internal energy, free energy, electron pressure    c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     gas pressure
-      pgas = ssum( mfe, p, 1 )
+      pgas = sum(p)
 c     ===================================================================
       if ( pgas .le. 0.d0 ) then
         write(6,*) 'pgas not positive: pgas,logt,logrho = ',
@@ -606,7 +619,7 @@ c     ===================================================================
       pglog(irho) = log10( pgas )
 c
 c     internal energy (per cm**3)
-      egas = ssum( mfe, e, 1 ) / vol
+      egas = sum(e) / vol
 c     ===================================================================
       if ( egas .le. 0.d0 ) then
         write(6,*) 'egas not positive: egas,logt,logrho = ',
@@ -617,7 +630,7 @@ c     ===================================================================
       elog(irho) = log10( egas )
 c
 c     free energy
-      fgas = ssum( mfe, f, 1 )
+      fgas = sum(f)
 c
 c     electron pressure
       pe = p(3)
@@ -640,20 +653,20 @@ c     save old values from previous point on isotherm
       if ( irho .gt. 1 ) call scopy( mion*mz, frac, 1, fraco, 1 )
 c
 c     generate current values
-      do 2 kchem = 1, nchem
-      is1 = ichm1(kchem)
-      is2 = ichm2(kchem)
-      kk  = nucz (kchem)
-      sum = ssum( nion(kchem), sn(is1), 1 )
+      do kchem = 1, nchem
+         is1 = ichm1(kchem)
+         is2 = ichm2(kchem)
+         kk  = nucz (kchem)
+         sumsn = ssum( nion(kchem), sn(is1), 1 )
 c     allow for hydrogen molecules
-      if ( kk .eq. 1 ) sum = sum + sn(ish2) + sn(ish2p)
+         if ( kk .eq. 1 ) sumsn = sumsn + sn(ish2) + sn(ish2p)
 c
-      do 1 is = is1, is2
-      jion = is - is1 + 1
-      frac(jion, kk) = sn(is) / sum
-    1 continue
+         do is = is1, is2
+            jion = is - is1 + 1
+            frac(jion, kk) = sn(is) / sumsn
+         enddo
 c
-    2 continue
+      enddo
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     save electron fraction, total number of nuclei, log temperature, c
@@ -839,6 +852,10 @@ c
 c ----- additional variables for entropy (or cv,cp) to be put in varspc
       varspc(1,irho) = etot
       varspc(2,irho) = ftot
+
+      varspc(3,irho) = sne(irho)
+      varspc(4,irho) = snm(irho)
+      
 cccc  cvspc = rho * csubv(irho) / ( ck * (snm(irho) + sne(irho)) )
 cccc  cpspc = rho * csubp(irho) / ( ck * (snm(irho) + sne(irho)) )
       return
