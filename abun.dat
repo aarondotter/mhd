@@ -1,7 +1,7 @@
 full partition functions: h-fe
     7
   hydr    1    5    1.0079 9.4493e-1
-  heli    2    3    4.0026 5.3537e-1
+  heli    2    3    4.0026 5.3537e-2
   carb    6    7   12.0110 3.7795e-4
   nitr    7    8   14.0067 9.4940e-5
   oxyg    8    9   15.9994 8.0805e-4

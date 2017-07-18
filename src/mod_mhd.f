@@ -39,11 +39,11 @@ c---------------------------------------------------------------------
       double precision, intent(in) :: tl(:), res(:,:)
       integer :: i,n
       
-      write(io,'(99a16)') 'logT','logRho', 'entropy', 'logE', 
-     > 'chiRho', 'chiT', 'dlogE_dlogRho', 'dlogE_dlogT', 'grad_ad', 
-     > 'Cp', 'Cv', 'Gamma_1', 'Gamma_2', 'Gamma_3', 'f_H+', 'f_He+', 
-     > 'f_He++', 'f_H2', 'eta', 'logPrad', 'logPgas', 'n_e', 'n_ion',
-     > 'mu_e', 'mu'
+      write(io,'(99a16)') 'logRho', 'logPgas', 'logE', 'logS',
+     >     'dlnPgas_dlnT', 'dlnPgas_dlnRho', 'd2lnPgas_dlnT_dlnRho',
+     >     'dlnE_dlnT', 'dlnE_dlnRho', 'd2lnE_dlnT_dlnRho', 'dlnS_dlnT',
+     >     'dlnS_dlnRho', 'd2lnS_dlnT_dlnRho', 'mu', 'log_free_e', 
+     >     'eta', 'f_H+', 'f_He+', 'f_He++', 'f_H2', 'dse', 'dpe', 'dsp'
 
       n=size(tl)
       do i=1,n
@@ -51,7 +51,7 @@ c---------------------------------------------------------------------
       enddo
       end subroutine write_result
 
-
+      
       subroutine track(nrho0,logT,logRho)
       integer, intent(in) :: nrho0
       double precision, intent(in) :: logT(:), logRho(:)
@@ -257,7 +257,8 @@ c
       include 'parms'
       include 'tabparms'
 
-      double precision :: mu, muinv, mu_e, mu_i, ne, nion
+      double precision :: mu, muinv, mu_e, mu_i, ne, nion, deltaT,
+     >     deltaR
       
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
@@ -286,7 +287,11 @@ c
          write(*,*) 'tl(n)=', tl(n)
          stop 'rpun1: mismatch in temps'
       endif
+
 c
+      deltaT = 2.0d0*ddt
+      deltaR = 2.0d0*ddr
+      
       do m=1,nrho
 c     
 c............ quantities for table ................
@@ -294,8 +299,7 @@ c
          etot        = varspc(1,m,2)
          ftot        = varspc(2,m,2)
          stot        = varspc(5,m,2) !entropy
-         sl          = log10(stot)
-         prr         = carad*T*T*T*T/3.0d0
+         sl          = log10(max(stot,1e-20))
          rhol = rhomin(2) + dfloat(m-1)*drho
          rho = exp(umod*rhol)
          
@@ -305,22 +309,48 @@ c
          mu_i = rho/camu/nion
          muinv = (1.0d0/mu_i + 1.0d0/mu_e)
          mu = 1.0d0/muinv
+         pgas = exp(umod*pglg(m,2))
+         prad = carad*T*T*T*T/3.0d0
+         P = Pgas + Prad
 
-         dlnS_dlnT = (log10(varspc(5,m,5))-log10(varspc(5,m,4)))
-     >        / (2d0*ddt)
-         dlnS_dlnRho = (log10(varspc(5,m,3))-log10(varspc(5,m,1)))
-     >        / (2d0*ddr)
+         chiT = cht(m,2)
+         chiRho = chirh(m,2)
 
+         dlnP_dlnT = (ptlg(m,5) - ptlg(m,4)) / deltaT
+         dlnP_dlnRho = (ptlg(m,3) - ptlg(m,1)) / deltaR
+         dlnS_dlnT = (log10(varspc(5,m,5))-log10(varspc(5,m,4)))/deltaT
+         dlnS_dlnRho=(log10(varspc(5,m,3))-log10(varspc(5,m,1)))/deltaR
+
+         !chiT = dlnP_dlnT
+         !chiRho = dlnP_dlnRho
+
+         !print *, cht(m,2), chiT, chirh(m,2), chiRho
+         
+         dlnE_dlnT = (etlg(m,5) - etlg(m,4))/deltaT
+         dlnE_dlnRho = (etlg(m,3) - etlg(m,1))/deltaR
+
+         dS_dT_Rho = (stot/T)*dlnS_dlnT
+         dS_dRho_T = (stot/rho)*dlnS_dlnRho
+         dE_dT_Rho = (etot/T)*dlnE_dlnT
+         dE_dRho_T = (etot/rho) * dlnE_dlnRho
+         dP_dT_Rho = (P/T)*dlnP_dlnT
+
+         !Frank's Maxwell relations
+         dse = T*dS_dT_Rho/dE_dT_Rho -1.0d0
+         
+         dpe = (rho*rho*dE_dRho_T + T*dP_dT_Rho)/P - 1.0d0        
+
+         dsp = -(dS_dRho_T*rho*rho)/dP_dT_Rho - 1.0d0
          
          var(n,m, 1) = rhol
          var(n,m, 2) = pglg(m,2)
          var(n,m, 3) = etlg(m,2)
          var(n,m, 4) = sl
-         var(n,m, 5) = cht(m,2)
-         var(n,m, 6) = chirh(m,2)
+         var(n,m, 5) = chiT
+         var(n,m, 6) = chiRho
          var(n,m, 7) = 0d0 !d2lnPgas_dlnT_dlnRho
-         var(n,m, 8) = (etlg(m,5) - etlg(m,4))/(2.d0*ddt)
-         var(n,m, 9) = (etlg(m,3) - etlg(m,1))/(2.d0*ddr)
+         var(n,m, 8) = dlnE_dlnT
+         var(n,m, 9) = dlnE_dlnRho
          var(n,m,10) = 0d0 !d2lnE_dlnT_dlnRho
          var(n,m,11) = dlnS_dlnT
          var(n,m,12) = dlnS_dlnRho
@@ -332,9 +362,9 @@ c
          var(n,m,18) = frp2(m,2)
          var(n,m,19) = frp3(m,2)
          var(n,m,20) = frp4(m,2)
-         var(n,m,21) = 0d0      !dse
-         var(n,m,22) = 0d0      !dpe
-         var(n,m,23) = 0d0      !dsp
+         var(n,m,21) = dse
+         var(n,m,22) = dpe
+         var(n,m,23) = dsp
       enddo
 
       return
