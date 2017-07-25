@@ -292,6 +292,17 @@ c***********************************************************************
       include 'types'
       include 'parms'
       include 'coms'
+      common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
+     & pglg_array(mrho,5),pelg_array(mrho,5),ptlg_array(mrho,5),
+     & etlg_array(mrho,5),csbv_array(mrho,5),
+     & csbp_array(mrho,5),chirh_array(mrho,5),cht_array(mrho,5),
+     & gm1_array(mrho,5),gm2_array(mrho,5),
+     & gm3_array(mrho,5),qdb_array(mrho,5),frp1_array(mrho,5),
+     & frp2_array(mrho,5),frp3_array(mrho,5),
+     & frp4_array(mrho,5),elpun_array(mrho,5),etapun_array(mrho,5),
+     & eltpun_array(mrho,5),elrpun_array(mrho,5),
+     & tnpun_array(mrho,5),eglg_array(mrho,5),sglg_array(mrho,5),
+     & slg_array(mrho,5),iloopi_array(5),nrho_array(5)
 c
       if(nchem.gt.mchem .or. nrho.gt.mrho) then
             write(6,1009) nchem,mchem,nrho,mrho
@@ -302,13 +313,14 @@ c
 
 c
       
-      if ( ipunch .le. 0 ) return
+!      if ( ipunch .le. 0 ) return
 
       
       if ( it .eq. 1 .and. iloop .eq. 1 ) then
-            write ( ipunch, iostat = ier ) nchem,(atwt(ic),abun(ic),
-     .      ic=1,nchem),gasmu
-            write ( ipunch, iostat = ier ) nt, nrho, drho, ddt, ddr
+c  don't need this when communicating output by common data
+c            write ( ipunch, *, iostat = ier ) nchem,(atwt(ic),abun(ic),
+c     .      ic=1,nchem),gasmu
+c            write ( ipunch, *, iostat = ier ) nt, nrho, drho, ddt, ddr
       end if
       if ( ier .gt. 0 ) go to 2
 c
@@ -316,19 +328,54 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     write file                                                       c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
-      write( ipunch, iostat=ier ) nrho,iloop,tlog,rhomin,
-     .             (elog (i  ), i= 1, nrho), (pglog(i  ), i= 1, nrho),
-     .             (pelog(i  ), i= 1, nrho), (ptlog(i  ), i= 1, nrho),
-     .             (etlog(i  ), i= 1, nrho), (csubv(i  ), i= 1, nrho),
-     .             (csubp(i  ), i= 1, nrho), (chirho(i ), i= 1, nrho),
-     .             (chit (i  ), i= 1, nrho), (gam1 (i  ), i= 1, nrho),
-     .             (gam2 (i  ), i= 1, nrho), (gam3 (i  ), i= 1, nrho),
-     .             (qadb (i  ), i= 1, nrho),
-     .             ((frapun(ii,i ), i=1,nrho),ii=1,4),
-     .             (elpun(i  ), i= 1, nrho), (etapun(i  ),i= 1, nrho),
-     .             (eltpun(i ), i= 1, nrho), (elrpun(i  ),i= 1, nrho),
-     .             (tnpun (i ), i= 1, nrho),
-     .             ( (varspc(ivspc,i  ), ivspc=1,mvspc),  i= 1, nrho)
+      k = iloop
+      tlg_array(k) = tlog
+      rhomin_array(k) = rhomin
+      iloopi_array(k) = iloop
+      nrho_array(k) = nrho
+      do i=1,nrho
+         elg_array(i,k) = elog (i  )
+         pglg_array(i,k) = pglog(i  )
+         pelg_array(i,k) = pelog(i  )
+         ptlg_array(i,k) = ptlog(i  )
+         etlg_array(i,k) = etlog(i  )
+         csbv_array(i,k) = csubv(i  )
+         csbp_array(i,k) = csubp(i  )
+         chirh_array(i,k) = chirho(i )
+         cht_array(i,k) = chit (i  )
+         gm1_array(i,k) = gam1 (i  )
+         gm2_array(i,k) = gam2 (i  )
+         gm3_array(i,k) = gam3 (i  )
+         qdb_array(i,k) = qadb (i  )
+         frp1_array(i,k) = frapun(1,i )
+         frp2_array(i,k) = frapun(2,i )
+         frp3_array(i,k) = frapun(3,i )
+         frp4_array(i,k) = frapun(4,i )
+         elpun_array(i,k) = elpun(i  )
+         etapun_array(i,k) = etapun(i  )
+         eltpun_array(i,k) = eltpun(i )
+         elrpun_array(i,k) = elrpun(i  )
+         tnpun_array(i,k) = tnpun (i )
+         eglg_array(i,k) = eglog(i  )
+         sglg_array(i,k) = sglog(i  )
+         slg_array(i,k) = stlog(i  )
+      end do
+
+!      write( ipunch, *, iostat=ier ) nrho,iloop,tlog,rhomin,
+!     .             (elog (i  ), i= 1, nrho), (pglog(i  ), i= 1, nrho),
+!     .             (pelog(i  ), i= 1, nrho), (ptlog(i  ), i= 1, nrho),
+!     .             (etlog(i  ), i= 1, nrho), (csubv(i  ), i= 1, nrho),
+!     .             (csubp(i  ), i= 1, nrho), (chirho(i ), i= 1, nrho),
+!     .             (chit (i  ), i= 1, nrho), (gam1 (i  ), i= 1, nrho),
+!     .             (gam2 (i  ), i= 1, nrho), (gam3 (i  ), i= 1, nrho),
+!     .             (qadb (i  ), i= 1, nrho),
+!     .             ((frapun(ii,i ), i=1,nrho),ii=1,4),
+!     .             (elpun(i  ), i= 1, nrho), (etapun(i  ),i= 1, nrho),
+!     .             (eltpun(i ), i= 1, nrho), (elrpun(i  ),i= 1, nrho),
+!     .             (tnpun (i ), i= 1, nrho),
+!     .             ( (varspc(ivspc,i  ), ivspc=1,mvspc),  i= 1, nrho)
+     
+     
       if ( ier .le. 0 ) return
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

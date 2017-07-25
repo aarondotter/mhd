@@ -30,4 +30,4 @@ table.o: $(LIB)
 	$(FC) $(FLAGS) -c $<
 
 clean:
-	rm -f test_MHD.o ${LIB_OBJS} $(LIB) core *~
+	rm -f test_MHD.o *.o $(LIB) core *~ *.mod

@@ -39,8 +39,8 @@ contains
          
          logRho               = res(i, 1)
          logPgas              = res(i, 2)
-         logE                 = res(i, 3)
-         logS                 = res(i, 4)
+         logE                 = res(i, 3) - logRho
+         logS                 = res(i, 4) - logRho
          chiT                 = res(i, 5)
          chiRho               = res(i, 6)
          d2lnPgas_dlnT_dlnRho = res(i, 7)
@@ -68,7 +68,6 @@ contains
          Pgas = 10d0**logPgas
          P = Pgas + Prad
 
-
          
          dlnP_dlnT = chiT
          dlnP_dlnRho = chiRho
@@ -85,7 +84,7 @@ contains
             logRho, logPgas, logE, logS, dlnPgas_dlnT, dlnPgas_dlnRho, &
             d2lnPgas_dlnT_dlnRho, dlnE_dlnT, dlnE_dlnRho, d2lnE_dlnT_dlnRho, &
             dlnS_dlnT, dlnS_dlnRho, d2lnS_dlnT_dlnRho, mu, log_free_e, &
-            eta, f_H_plus1, f_He_plus1, f_He_plus2, f_H2, dse, dpe, dsp
+            eta, f_H_plus1, f_He_plus1, f_He_plus2, f_H2, dse, dpe, prad
          
       enddo
    end subroutine write_MESA_table
@@ -97,13 +96,13 @@ contains
     double precision, allocatable :: res(:,:) !(nt,nres)
     double precision :: logT, logRho_min, logRho_max, dlogRho
     integer :: io, j, n
-    character(len=128) :: abunfile, datafile, outfile
+    character(len=128) :: abunfile, datafile, outfile, punchfile
 
 
-    logRho_min = -15.0d0
-    logRho_max = -1.0d0
-    logT = 7.0d0
-    n = 15
+    logRho_min = -5.80d0
+    logRho_max = -1.8d0
+    logT = 5.04d0
+    n = 3!5
 
 
     ! abun_z_0.0, abun_z_0.02, abun_z_0.2, abun_z_0.4, abun_z_0.5, abun_z_0.6
@@ -132,8 +131,9 @@ contains
 
     !names of data files for MHD
     datafile='eosdat07'
-    abunfile='abun.dat'
-    outfile = 'eostab2.dat'
+    abunfile='/home/dotter/Downloads/abun_z_0.02.dat'
+    outfile = 'eostab_z0.02.dat'
+    punchfile='punch.txt'
 
     dlogRho = (logRho_max - logRho_min)/dble(n - 1)
     write(*,*) 'logRho_min', logRho_min
@@ -151,24 +151,24 @@ contains
 
     write(*,*) 'read in data files'
     !read in data files
-    call mhd_init(datafile,abunfile)
+    call mhd_init(datafile,abunfile) !,punchfile)
 
     write(*,*) 'process T,Rho arrays through MHD'
     !process T,Rho arrays through MHD
     call eosDT_get( logTs, logRhos, res)
 
     write(*,*) 'write results', trim(outfile)
-    io = 22 !unit for output table
+    io = 99 !unit for output table
     open( unit=io , file=trim(outfile))
     call write_MESA_table(io,logTs,res)      
     close(io)
 
-    write(*,*)
-    do j=1,n
-       write(*,*) 'logRhos(j)', j, logRhos(j)
-    enddo
-    write(*,*) 'logT', logT
-    write(*,*)
+!!$    write(*,*)
+!!$    do j=1,n
+!!$       write(*,*) 'logRhos(j)', j, logRhos(j)
+!!$    enddo
+!!$    write(*,*) 'logT', logT
+!!$    write(*,*)
 
   end subroutine table_for_Bill
 

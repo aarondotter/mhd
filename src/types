@@ -20,8 +20,8 @@ C Type declarations for variables from the file 'coms' in MHD
       double precision PGAS, PGLOG, PHIM,PTLOG,QADB,RAD,RAD0,RADSP,RHO,
      1      RHOLOG, RHOMIN, SF, SMASS, SN, SNE, SNIS, SNKEEP, SNM, SP,
      2      SPHI, SR, SS, STWT, STWTSP, T, THET, TLOG, TMIN,TNPUN,TOTN
-     3      , VARSPC, VOL, W, WLN, WSCR, WWIS, WWKEEP, WWT, XFRAC, Z,
-     4      ZMASK, ZS, ZSQ
+     3      , VOL, W, WLN, WSCR, WWIS, WWKEEP, WWT, XFRAC, Z,
+     4      ZMASK, ZS, ZSQ, EGLOG, SGLOG, STLOG
       integer ICHM1, ICHM2, IDAT, IDFMAX, IDNMAX, IELDIR, IFAIL,
      1         IFAILT, IFRACS, IHESC, IHSC, IIN,ILOOP,INEXT,IOUT,IPF
      2         , IPOPS, IPUNCH, IRHO, ISE, ISH, ISHM,ISH2,ISH2P,ISPES

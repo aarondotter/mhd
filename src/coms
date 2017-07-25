@@ -114,7 +114,8 @@ c
      .                         elpun (mrho  ),        etapun(mrho  ),
      .                         elrpun(mrho  ),        eltpun(mrho  ),
      .                         tnpun (mrho  ),        frapun(4,mrho),
-     .                         varspc(mvspc,mrho)
+     .                         eglog (mrho  ),        sglog (mrho  ),
+     .                         stlog (mrho  )
 c
       common /keep/            snkeep(mspes ),        wwkeep(mspes ),
      .                         iwin1k(mchem ),        iwin2k(mchem ),

@@ -5,11 +5,11 @@ c---------------------------------------------------------------------
 
       implicit double precision (a-h,o-z), integer (i-n)
 
-      integer, parameter :: nres=23
+      integer, parameter :: nres=20
 
       private
 
-      public :: mhd_init, eosDT_get, nres, write_result
+      public :: mhd_init, eosDT_get, nres
       
       contains
 
@@ -31,27 +31,13 @@ c---------------------------------------------------------------------
       call tdfill
 
       call outtab(result)
+      
+      call closefiles
           
       end subroutine eosDT_get
       
-      subroutine write_result(io,tl,res)
-      integer, intent(in) :: io
-      double precision, intent(in) :: tl(:), res(:,:)
-      integer :: i,n
-      
-      write(io,'(99a16)') 'logRho', 'logPgas', 'logE', 'logS',
-     >     'dlnPgas_dlnT', 'dlnPgas_dlnRho', 'd2lnPgas_dlnT_dlnRho',
-     >     'dlnE_dlnT', 'dlnE_dlnRho', 'd2lnE_dlnT_dlnRho', 'dlnS_dlnT',
-     >     'dlnS_dlnRho', 'd2lnS_dlnT_dlnRho', 'mu', 'log_free_e', 
-     >     'eta', 'f_H+', 'f_He+', 'f_He++', 'f_H2', 'dse', 'dpe', 'dsp'
 
-      n=size(tl)
-      do i=1,n
-         write(io,'(1p99e16.8)') tl(i), res(i,:)
-      enddo
-      end subroutine write_result
 
-      
       subroutine track(nrho0,logT,logRho)
       integer, intent(in) :: nrho0
       double precision, intent(in) :: logT(:), logRho(:)
@@ -95,6 +81,17 @@ c
 
       return
       end
+      
+      
+      subroutine closefiles
+      common /io    /
+     .                                iin    ,               iout   ,
+     .                                ipunch ,               ifracs ,
+     .                                ipops  ,               idat
+      close(iin)
+!      close(ipunch)
+      close(idat)
+      end
 
       
       subroutine openfile(datafile,abunfile)
@@ -112,13 +109,12 @@ c***********************************************************************
       open(unit=iin,file=trim(abunfile),iostat=ier,status='old')
       if (ier>0) go to 4
       
-      open(unit=ipunch,iostat=ier,status='unknown',form='unformatted')
-      if (ier>0) go to 4
+!      open(unit=ipunch,file=trim(punchfile),iostat=ier,status='unknown')
+!      if (ier>0) go to 4
 
       open(unit=idat,file=trim(datafile),iostat=ier,status='old',
      >     form='unformatted')
       if(ier>0) go to 4
-      
       
       return
 c
@@ -156,6 +152,7 @@ c
       nrho   = nr2
 c>>>>>>>>>>>>>>>>>> nt,drho,nrho transfered via common
 c
+      !icase=0 ! starting at very low density
       icase=1
       call tdtab(icase)
 c
@@ -165,7 +162,8 @@ c
       
 
       subroutine outtab(result)
-      integer ier
+      implicit double precision (a-h,o-z), integer (i-n)
+c      integer ier
       double precision :: result(:,:)
 c
 c
@@ -176,6 +174,30 @@ c
 
       common/tab/tl2(nt2m),rl2(nt2m,nr2m),nt2,nr2
       common/out/var2(nt2m,nr2m,ivar)
+
+      common /table /
+     .                                rhomin ,               drho   ,
+     .                                rholog ,               rho    ,
+     .                                tmin   ,               dt     ,
+     .                                ddr    ,               ddt    ,
+     .                                tlog   ,               t      ,
+     .                                nrho   ,               irho   ,
+     .                                nt     ,               it     ,
+     .                                iloop  ,               inext  ,
+     .                                vol    ,        elog  (mrho  ),
+     .                         pglog (mrho  ),        pelog (mrho  ),
+     .                         snm   (mrho  ),        sne   (mrho  ),
+     .                         csubv (mrho  ),        csubp (mrho  ),
+     .                         chirho(mrho  ),        chit  (mrho  ),
+     .                         gam1  (mrho  ),        gam2  (mrho  ),
+     .                         gam3  (mrho  ),        qadb  (mrho  ),
+     .                         ptlog (mrho  ),        etlog (mrho  ),
+     .                         elpun (mrho  ),        etapun(mrho  ),
+     .                         elrpun(mrho  ),        eltpun(mrho  ),
+     .                         tnpun (mrho  ),        frapun(4,mrho),
+     .                         eglog (mrho  ),        sglog (mrho  ),
+     .                         stlog (mrho  )
+
 c
 c>>>>>>>>>>>>>>>>>>>>>> only part of mhd common needed <<<<<<<<<<<<<<<<
       common /io    /
@@ -185,17 +207,18 @@ c>>>>>>>>>>>>>>>>>>>>>> only part of mhd common needed <<<<<<<<<<<<<<<<
 
 c>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 c
-      dimension atwt (mchem),abun (mchem)
+!      dimension atwt (mchem),abun (mchem)
 c
 c....................................................................
 c
-      rewind ipunch
+!      rewind ipunch
 c
-      read(ipunch) nchem,(atwt(ic),abun(ic),ic=1,nchem),gasmu
+!      read(ipunch, *) nchem,(atwt(ic),abun(ic),ic=1,nchem),gasmu
       
-      read ( ipunch, iostat = ier ) nt, nr, drho, ddt, ddr
+!      read ( ipunch, *, iostat = ier ) nt, nr, drho, ddt, ddr
+
 c======================================================================
-      call rpun(nt2,nr2,drho,ddt,ddr)
+      call rpun(nt2,nr2,drho)
 c======================================================================
 c     
       do i=1,nt2
@@ -208,163 +231,139 @@ c
       end
 
       
-      subroutine rpun(nt,nrho,drho,ddt,ddr)
+      subroutine rpun(nt,nrho,drho)
       include 'parms'
       include 'tabparms'
 
       common/tab/tl2(nt2m),rl2(nt2m,nr2m),nt2,nr2
       common/out/var2(nt2m,nr2m,ivar)
       common /io/iin,iout,ipunch,ifracs,ipops,idat
-      common/rp1/ tlg(5),rhomin(5),elg(mrho,5),
-     & pglg(mrho,5),pelg(mrho,5),ptlg(mrho,5),etlg(mrho,5),csbv(mrho,5),
-     & csbp(mrho,5),chirh(mrho,5),cht(mrho,5),gm1(mrho,5),gm2(mrho,5),
-     & gm3(mrho,5),qdb(mrho,5),frp1(mrho,5),frp2(mrho,5),frp3(mrho,5),
-     & frp4(mrho,5),elpun(mrho,5),etapun(mrho,5),
-     & eltpun(mrho,5),elrpun(mrho,5),tnpun(mrho,5),varspc(mvspc,mrho,5),
-     & iloopi(5)
+      common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
+     & pglg_array(mrho,5),pelg_array(mrho,5),ptlg_array(mrho,5),
+     & etlg_array(mrho,5),csbv_array(mrho,5),
+     & csbp_array(mrho,5),chirh_array(mrho,5),cht_array(mrho,5),
+     & gm1_array(mrho,5),gm2_array(mrho,5),
+     & gm3_array(mrho,5),qdb_array(mrho,5),frp1_array(mrho,5),
+     & frp2_array(mrho,5),frp3_array(mrho,5),
+     & frp4_array(mrho,5),elpun_array(mrho,5),etapun_array(mrho,5),
+     & eltpun_array(mrho,5),elrpun_array(mrho,5),
+     & tnpun_array(mrho,5),eglg_array(mrho,5),sglg_array(mrho,5),
+     & slg_array(mrho,5),iloopi_array(5),nrho_array(5)
 c ------ varspc for various quantities (with the possibility
 c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       do n=1,nt
-         do j=1,5
-            read( ipunch )      nrhtab,iloopi(j),tlg(j),rhomin(j),
-     .             (elg  (i,j), i= 1, nrho), (pglg (i,j), i= 1, nrho),
-     .             (pelg (i,j), i= 1, nrho), (ptlg (i,j), i= 1, nrho),
-     .             (etlg (i,j), i= 1, nrho), (csbv (i,j), i= 1, nrho),
-     .             (csbp (i,j), i= 1, nrho), (chirh(i,j), i= 1, nrho),
-     .             (cht  (i,j), i= 1, nrho), (gm1  (i,j), i= 1, nrho),
-     .             (gm2  (i,j), i= 1, nrho), (gm3  (i,j), i= 1, nrho),
-     .             (qdb  (i,j), i= 1, nrho),
-     .             (frp1 (i,j), i= 1, nrho), (frp2 (i,j), i= 1, nrho),
-     .             (frp3 (i,j), i= 1, nrho), (frp4 (i,j), i= 1, nrho),
-     .             (elpun(i,j), i= 1, nrho), (etapun(i,j),i= 1, nrho),
-     .             (eltpun(i,j),i= 1, nrho), (elrpun(i,j),i= 1, nrho),
-     .             (tnpun (i,j),i= 1, nrho),
-     .             ( (varspc(ivspc,i,j), ivspc=1,mvspc),  i= 1, nrho)
+!         do j=1,5
+!            read( ipunch, * )      nrho_array(j),iloopi_array(j),
+!     .             tlg_array(j),rhomin_array(j),
+!     .             (elg_array  (i,j), i= 1, nrho), 
+!     .             (pglg_array (i,j), i= 1, nrho),
+!     .             (pelg_array (i,j), i= 1, nrho), 
+!     .             (ptlg_array (i,j), i= 1, nrho),
+!     .             (etlg_array (i,j), i= 1, nrho), 
+!     .             (csbv_array (i,j), i= 1, nrho),
+!     .             (csbp_array (i,j), i= 1, nrho), 
+!     .             (chirh_array(i,j), i= 1, nrho),
+!     .             (cht_array  (i,j), i= 1, nrho), 
+!     .             (gm1_array  (i,j), i= 1, nrho),
+!     .             (gm2_array  (i,j), i= 1, nrho), 
+!     .             (gm3_array  (i,j), i= 1, nrho),
+!     .             (qdb_array  (i,j), i= 1, nrho),
+!     .             (frp1_array (i,j), i= 1, nrho), 
+!     .             (frp2_array (i,j), i= 1, nrho),
+!     .             (frp3_array (i,j), i= 1, nrho), 
+!     .             (frp4_array (i,j), i= 1, nrho),
+!     .             (elpun_array(i,j), i= 1, nrho), 
+!     .             (etapun_array(i,j),i= 1, nrho),
+!     .             (eltpun_array(i,j),i= 1, nrho), 
+!     .             (elrpun_array(i,j),i= 1, nrho),
+!     .             (tnpun_array (i,j),i= 1, nrho),
+!     .             ( (varspc_array(ivspc,i,j), 
+!     .                  ivspc=1,mvspc),  i= 1, nrho)
+!         enddo
 
-         enddo
-
-         if(nrhtab.ne.nrho) stop ' mismatch of density points in rpun '
+         if(nrho_array(1).ne.nrho) then
+            write(*,*) 'nrho_array(1)', nrho_array(1)
+            write(*,*) 'nrho', nrho
+            stop ' mismatch of density points in rpun '
+         end if
          
-         call rpun1(n,nrho,var2,tl2,nt2m,nr2m,ivar,drho,ddt,ddr)
+         !stop 'rpun'
+         call rpun1(n,nrho,var2,tl2,nt2m,nr2m,ivar,drho)
       enddo
 
       return
       end
 
       
-      subroutine rpun1(n,nrho,var,tl,ntm,nrm,ivar1,drho,ddt,ddr)
+      subroutine rpun1(n,nrho,var,tl,ntm,nrm,ivar1,drho)
       include 'parms'
       include 'tabparms'
-
-      double precision :: mu, muinv, mu_e, mu_i, ne, nion, deltaT,
-     >     deltaR
-      
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
       dimension var(ntm,nrm,ivar1),tl(ntm)
 c
-      common/rp1/ tlg(5),rhomin(5),elg(mrho,5),
-     & pglg(mrho,5),pelg(mrho,5),ptlg(mrho,5),etlg(mrho,5),csbv(mrho,5),
-     & csbp(mrho,5),chirh(mrho,5),cht(mrho,5),gm1(mrho,5),gm2(mrho,5),
-     & gm3(mrho,5),qdb(mrho,5),frp1(mrho,5),frp2(mrho,5),frp3(mrho,5),
-     & frp4(mrho,5),elpun(mrho,5),etapun(mrho,5),
-     & eltpun(mrho,5),elrpun(mrho,5),tnpun(mrho,5),varspc(mvspc,mrho,5),
-     & iloopi(5)
+      common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
+     & pglg_array(mrho,5),pelg_array(mrho,5),ptlg_array(mrho,5),
+     & etlg_array(mrho,5),csbv_array(mrho,5),
+     & csbp_array(mrho,5),chirh_array(mrho,5),cht_array(mrho,5),
+     & gm1_array(mrho,5),gm2_array(mrho,5),
+     & gm3_array(mrho,5),qdb_array(mrho,5),frp1_array(mrho,5),
+     & frp2_array(mrho,5),frp3_array(mrho,5),
+     & frp4_array(mrho,5),elpun_array(mrho,5),etapun_array(mrho,5),
+     & eltpun_array(mrho,5),elrpun_array(mrho,5),
+     & tnpun_array(mrho,5),eglg_array(mrho,5),sglg_array(mrho,5),
+     & slg_array(mrho,5),iloopi_array(5),nrho_array(5)
 c ------ varspc for various quantities (with the possibility
 c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       umod   = log(10.d0)
       carad = 7.56567d-15
-      camu = 1.6605655d-24
 c
-      tlog = tlg(2)
+      tlog = tlg_array(1)
       T = exp(umod*tlog)
 c
       if(dabs(tlog-tl(n)).gt.1.d-03)then
          write(*,*) 'tlog=', tlog
-         write(*,*) 'tlg(2)=', tlg(2)
+         write(*,*) 'tlg_array(2)=', tlg_array(1)
          write(*,*) 'tl(n)=', tl(n)
+         write(*,*) 'n', n
          stop 'rpun1: mismatch in temps'
       endif
-
 c
-      deltaT = 2.0d0*ddt
-      deltaR = 2.0d0*ddr
-      
       do m=1,nrho
 c     
 c............ quantities for table ................
 c
-         etot        = varspc(1,m,2)
-         ftot        = varspc(2,m,2)
-         stot        = varspc(5,m,2) !entropy
-         sl          = log10(max(stot,1e-20))
-         rhol = rhomin(2) + dfloat(m-1)*drho
-         rho = exp(umod*rhol)
-         
-         ne = varspc(3,m,2)
-         nion = varspc(4,m,2)
-         mu_e = rho/camu/ne
-         mu_i = rho/camu/nion
-         muinv = (1.0d0/mu_i + 1.0d0/mu_e)
-         mu = 1.0d0/muinv
-         pgas = exp(umod*pglg(m,2))
-         prad = carad*T*T*T*T/3.0d0
-         P = Pgas + Prad
+         var(n,m, 1) = rhomin_array(1) + dfloat(m-1)*drho
+         var(n,m, 2) = slg_array(m,1)
+         var(n,m, 3) = etlg_array(m,1)
+         var(n,m, 4) = chirh_array(m,1)
+         var(n,m, 5) = cht_array(m,1)
+         var(n,m, 6) = eglg_array(m,1)
+         var(n,m, 7) = sglg_array(m,1)
+         var(n,m, 8) = 1.d0 - 1.d0/gm2_array(m,1)
+         var(n,m, 9) = csbp_array(m,2)
 
-         chiT = cht(m,2)
-         chiRho = chirh(m,2)
+     
+         var(n,m,14) = frp1_array(m,1)
+         var(n,m,15) = frp2_array(m,1)
+         var(n,m,16) = frp3_array(m,1)
+         var(n,m,17) = frp4_array(m,1)
+         var(n,m,18) = etapun_array(m,1)
+         var(n,m,19) = carad*T*T*T*T/3.0d0
+         var(n,m,20) = pglg_array(m,1)
 
-         dlnP_dlnT = (ptlg(m,5) - ptlg(m,4)) / deltaT
-         dlnP_dlnRho = (ptlg(m,3) - ptlg(m,1)) / deltaR
-         dlnS_dlnT = (log10(varspc(5,m,5))-log10(varspc(5,m,4)))/deltaT
-         dlnS_dlnRho=(log10(varspc(5,m,3))-log10(varspc(5,m,1)))/deltaR
+         csubv       = csbv_array(m,1)
+         gam2        = gm2_array(m,1)
+         gam3        = gm3_array(m,1)
+         qadb        = qdb_array(m,1)
+         gam1        = gm1_array(m,1)
 
-         !chiT = dlnP_dlnT
-         !chiRho = dlnP_dlnRho
-
-         !print *, cht(m,2), chiT, chirh(m,2), chiRho
-         
-         dlnE_dlnT = (etlg(m,5) - etlg(m,4))/deltaT
-         dlnE_dlnRho = (etlg(m,3) - etlg(m,1))/deltaR
-
-         dS_dT_Rho = (stot/T)*dlnS_dlnT
-         dS_dRho_T = (stot/rho)*dlnS_dlnRho
-         dE_dT_Rho = (etot/T)*dlnE_dlnT
-         dE_dRho_T = (etot/rho) * dlnE_dlnRho
-         dP_dT_Rho = (P/T)*dlnP_dlnT
-
-         !Frank's Maxwell relations
-         dse = T*dS_dT_Rho/dE_dT_Rho -1.0d0
-         
-         dpe = (rho*rho*dE_dRho_T + T*dP_dT_Rho)/P - 1.0d0        
-
-         dsp = -(dS_dRho_T*rho*rho)/dP_dT_Rho - 1.0d0
-         
-         var(n,m, 1) = rhol
-         var(n,m, 2) = pglg(m,2)
-         var(n,m, 3) = etlg(m,2)
-         var(n,m, 4) = sl
-         var(n,m, 5) = chiT
-         var(n,m, 6) = chiRho
-         var(n,m, 7) = 0d0 !d2lnPgas_dlnT_dlnRho
-         var(n,m, 8) = dlnE_dlnT
-         var(n,m, 9) = dlnE_dlnRho
-         var(n,m,10) = 0d0 !d2lnE_dlnT_dlnRho
-         var(n,m,11) = dlnS_dlnT
-         var(n,m,12) = dlnS_dlnRho
-         var(n,m,13) = 0d0 !d2lnS_dlnT_dlnRho
-         var(n,m,14) = mu
-         var(n,m,15) = 0d0 !log_free_e
-         var(n,m,16) = etapun(m,2)
-         var(n,m,17) = frp1(m,2)
-         var(n,m,18) = frp2(m,2)
-         var(n,m,19) = frp3(m,2)
-         var(n,m,20) = frp4(m,2)
-         var(n,m,21) = dse
-         var(n,m,22) = dpe
-         var(n,m,23) = dsp
+         var(n,m,10) = csubv
+         var(n,m,11) = gam1
+         var(n,m,12) = gam2
+         var(n,m,13) = gam3
       enddo
 
       return
@@ -430,8 +429,8 @@ c     species (including electrons).
      >        name(kchem), nucz(kchem), nion(kchem),
      >        atwt(kchem), abun(kchem)
 
-         write(6,*) 'kchem, atwt, abun =',kchem, atwt(kchem),
-     *        abun(kchem)
+c         write(6,*) 'kchem, atwt, abun =',kchem, atwt(kchem),
+c    *        abun(kchem)
          nspes = nspes + nion(kchem)
       enddo
       
@@ -509,9 +508,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     number of tables
       read   ( iin, '(i5)' ) npf
-      write  ( iout,  '(a1)' ) '0'
-      write  ( iout, 17 ) npf
- 17   format (' partition function tables used for',i4,' species:' )
+c      write  ( iout,  '(a1)' ) '0'
+c      write  ( iout, 17 ) npf
+c 17   format (' partition function tables used for',i4,' species:' )
 c
 c     loop over all tables
       do ip = 1, npf
@@ -650,7 +649,7 @@ c     gas pressure, internal energy, free energy, electron pressure    c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c
 c     gas pressure
-      pgas = sum(p)
+      pgas = ssum( mfe, p, 1 )
 c     ===================================================================
       if ( pgas .le. 0.d0 ) then
         write(6,*) 'pgas not positive: pgas,logt,logrho = ',
@@ -661,7 +660,7 @@ c     ===================================================================
       pglog(irho) = log10( pgas )
 c
 c     internal energy (per cm**3)
-      egas = sum(e) / vol
+      egas = ssum( mfe, e, 1 ) / vol
 c     ===================================================================
       if ( egas .le. 0.d0 ) then
         write(6,*) 'egas not positive: egas,logt,logrho = ',
@@ -672,7 +671,7 @@ c     ===================================================================
       elog(irho) = log10( egas )
 c
 c     free energy
-      fgas = sum(f)
+      fgas = ssum( mfe, f, 1 )
 c
 c     electron pressure
       pe = p(3)
@@ -695,20 +694,20 @@ c     save old values from previous point on isotherm
       if ( irho .gt. 1 ) call scopy( mion*mz, frac, 1, fraco, 1 )
 c
 c     generate current values
-      do kchem = 1, nchem
-         is1 = ichm1(kchem)
-         is2 = ichm2(kchem)
-         kk  = nucz (kchem)
-         sumsn = ssum( nion(kchem), sn(is1), 1 )
+      do 2 kchem = 1, nchem
+      is1 = ichm1(kchem)
+      is2 = ichm2(kchem)
+      kk  = nucz (kchem)
+      sum = ssum( nion(kchem), sn(is1), 1 )
 c     allow for hydrogen molecules
-         if ( kk .eq. 1 ) sumsn = sumsn + sn(ish2) + sn(ish2p)
+      if ( kk .eq. 1 ) sum = sum + sn(ish2) + sn(ish2p)
 c
-         do is = is1, is2
-            jion = is - is1 + 1
-            frac(jion, kk) = sn(is) / sumsn
-         enddo
+      do 1 is = is1, is2
+      jion = is - is1 + 1
+      frac(jion, kk) = sn(is) / sum
+    1 continue
 c
-      enddo
+    2 continue
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     save electron fraction, total number of nuclei, log temperature, c
@@ -743,13 +742,17 @@ c-----------------------------------------------------------------------
 c     add radiation terms where needed                                 c
 c-----------------------------------------------------------------------
 c
-      d2fdt2 = d2fdt2 - 4.00000000000000 d0 * carad * t*t * vol
-      d2fdtv = d2fdtv - 1.33333333333333 d0 * carad * t*t*t
-      ptot   = pgas   + 0.33333333333333 d0 * carad * t*t*t*t
-      etot   = egas   + 1.00000000000000 d0 * carad * t*t*t*t * vol
-      ftot   = fgas   - 0.33333333333333 d0 * carad * t*t*t*t * vol
+      d2fdt2 = d2fdt2 - 4.00000000000000 d0 * carad * t**2 * vol
+      d2fdtv = d2fdtv - 1.33333333333333 d0 * carad * t**3
+      ptot   = pgas   + 0.33333333333333 d0 * carad * t**4
+      etot   = egas   + 1.00000000000000 d0 * carad * t**4 * vol
+      ftot   = fgas   - 0.33333333333333 d0 * carad * t**4 * vol
+      stot   = (etot - ftot)/t
       ptlog(irho) = log10( ptot )
       etlog(irho) = log10( etot )
+      eglog(irho) = log10( egas )
+      sglog(irho) = log10( (egas - fgas)/t )
+      stlog(irho) = log10( stot )
 c
 c-----------------------------------------------------------------------
 c     convert derivatives of f wrt populations to derivatives wrt      c
@@ -757,54 +760,60 @@ c     reaction parameters                                              c
 c-----------------------------------------------------------------------
 c
 c     first zero storage
-      fscr = 0.0d0
-      d2fdlt = 0.0d0
-      d2fdlv = 0.0d0
-      d2fdl2 = 0.0d0
-      dnedni = 0.0d0
-      a = 0.0d0
-      
+      do 4 ilam = 1, mlam
+      fscr  (ilam) = 0.0d0
+      d2fdlt(ilam) = 0.0d0
+      d2fdlv(ilam) = 0.0d0
+      dnedl(ilam)  = 0.0d0
+      do 3 jlam = 1, mlam
+      d2fdl2(ilam, jlam) = 0.0d0
+    3 continue
+    4 continue
+      do 6 is = 1, mspes
+      dnedni(is) = 0.0d0
+      do 5 js = 1, mspes
+      a(is, js) = 0.0d0
+    5 continue
+    6 continue
 c
 c-----------------------------------------------------------------------
 c     ignore d2f/dlam dt, etc for case of no reaction parameters       c
 c-----------------------------------------------------------------------
 c
-      if ( nlam > 0 ) then
+      if ( nlam .le. 0 ) go to 9
 c
 c     d2f/dlam dt = b * d2f/dn dt
-         call smv( nlam, nspes, b, mlam, d2fdnt, d2fdlt )
+      call smv( nlam, nspes, b, mlam, d2fdnt, d2fdlt )
 c
 c     d2f/dlam dv = b * d2f/dn dv
-         call smv( nlam, nspes, b, mlam, d2fdnv, d2fdlv )
+      call smv( nlam, nspes, b, mlam, d2fdnv, d2fdlv )
 c
 c     dne/dlam = b * dne/dn
-         dnedni(ise) = 1.0d0
-         call smv( nlam, nspes, b, mlam, dnedni, dnedl )
+      dnedni(ise) = 1.0d0
+      call smv( nlam, nspes, b, mlam, dnedni, dnedl )
 c
 c     form d2f/dn2 * b(transpose); store temporarily in matrix a
-         call smmtr(nspes,nspes,nlam,d2fdn2,mspes,b,mlam,a,mspes)
+      call smmtr( nspes, nspes, nlam, d2fdn2, mspes, b, mlam, a, mspes)
 c
 c     d2f/dlam2 = b * d2f/dn2 * b(transpose)
-         call smm( nlam, nspes, nlam, b, mlam, a, mspes, d2fdl2, mlam)
+      call smm( nlam, nspes, nlam, b, mlam, a, mspes, d2fdl2, mlam)
 c
 c======================================================================
 c     MACHINE-DEPENDENT LINEAR EQUATION SOLVER
 c======================================================================
-         mdim = mlam
-         call solvth(d2fdlt,d2fdlv,d2fdl2,res2,mdim)
+      mdim = mlam
+      call solvth(d2fdlt,d2fdlv,d2fdl2,res2,mdim)
 c======================================================================
 c
 c-----------------------------------------------------------------------
 c     c sub v                                                          c
 c-----------------------------------------------------------------------
 c
-         do ilam=1,nlam
-            fscr(ilam)=res2(ilam,1)
-         enddo
+      do 8 ilam=1,nlam
+      fscr(ilam)=res2(ilam,1)
+   8  continue
 c
-      endif
-      
-      csubv(irho) = -t * ( d2fdt2 - sdot(nlam, d2fdlt, 1, fscr, 1) )
+   9  csubv(irho) = -t * ( d2fdt2 - sdot(nlam, d2fdlt, 1, fscr, 1) )
      .                 / ( rho * vol )
 c
 c-----------------------------------------------------------------------
@@ -830,8 +839,11 @@ c-----------------------------------------------------------------------
 c     chi sub rho                                                      c
 c-----------------------------------------------------------------------
 c
-      if ( nlam > 0 ) fscr(1:nlam) = res2(1:nlam,2)
-      chirho(irho) = vol * ( d2fdv2 - sdot(nlam, d2fdlv, 1, fscr, 1) )
+      if ( nlam .le. 0 ) go to 11
+      do 10 ilam=1,nlam
+      fscr(ilam)=res2(ilam,2)
+  10  continue
+  11  chirho(irho) = vol * ( d2fdv2 - sdot(nlam, d2fdlv, 1, fscr, 1) )
      .                   / ptot
 c
 c-----------------------------------------------------------------------
@@ -883,15 +895,8 @@ c
       tnpun (irho)   = totn
       elpun (irho)   = frac( mion - 3 , 1 )
 c ----- additional variables for entropy (or cv,cp) to be put in varspc
-      varspc(1,irho) = etot
-      varspc(2,irho) = ftot
-
-      varspc(3,irho) = sne(irho)
-      varspc(4,irho) = snm(irho)
-
-      varspc(5,irho) = (etot - ftot)/t ! entropy
-    
-      
+cccc  varspc(1,irho) = etot
+cccc  varspc(2,irho) = ftot
 cccc  cvspc = rho * csubv(irho) / ( ck * (snm(irho) + sne(irho)) )
 cccc  cpspc = rho * csubp(irho) / ( ck * (snm(irho) + sne(irho)) )
       return
@@ -1105,8 +1110,8 @@ c
       if ( iquad.ne.0 .and. iter .ge. iqua1
      .                .and.(dfmax.lt.facqm .or. iter.ge.iqua2)
      .                .and. dfmax.lt. convq   .and.  iscan.eq.0) then
-         if(dfmax.gt.convw)
-     .      write(6,9011) iquad,iter,dfmax,dfmaxm,tlog,rholog
+c         if(dfmax.gt.convw)
+c     .      write(6,9011) iquad,iter,dfmax,dfmaxm,tlog,rholog
          goto 600
       end if
 c
@@ -1125,8 +1130,9 @@ c
 c
 c  signal bad (though successful) convergence
 c
- 1000 if(iter.ge.nwarn .and. isave.ne.-999)
-     .    write(6,9009) iter,dfmax,tlog,rholog
+ 1000 continue
+c     if(iter.ge.nwarn .and. isave.ne.-999)
+c     .    write(6,9009) iter,dfmax,tlog,rholog
 c
  1500 if ( ifail .ne. 0 ) then
           ifailt = ifailt + 1
@@ -1140,10 +1146,10 @@ c
 c
       return
 c
- 9009 format (' slow convergence: iter,dfmax,tlog,rholog: ',
-     .         1x,i5,1p3e16.6)
- 9011 format (' bad convergence: iquad,iter,dfmax,dfmaxm,tlog,rholog: ',
-     .        /1x,2i5,1p4e16.6)
+c 9009 format (' slow convergence: iter,dfmax,tlog,rholog: ',
+c     .         1x,i5,1p3e16.6)
+c 9011 format (' bad convergence: iquad,iter,dfmax,dfmaxm,tlog,rholog: ',
+c     .        /1x,2i5,1p4e16.6)
  9013 format (1x,76(1H*),/' all recovery attempts failed,',
      .      ' exit from fmin allowed: if this is a tabulated',
      .     /' point, the results will be completely wrong!',
@@ -1253,7 +1259,7 @@ c
 c
 c>>>>>>>>>>>>>>>>>>>>>>> end pulling do loop <<<<<<<<<<<<<<<<<<<<<<<<<<
 c
-             write(6,9004) tlog,rholog
+c             write(6,9004) tlog,rholog
 c
           end if
 c
@@ -1262,13 +1268,13 @@ c               *******************************
 c--------------------------------------------------------------------
 c     loop over perturbed isotherms (to prepare numerical derivatives)
 c---------------------------------------------------------------------
-          do iloop = 1, 5
+          do iloop = 1, 1 ! 1, 2 ! 5 
              if ( iloop .eq. 1 ) then
                 tlog = tlog0
-                rhomin = rhmin0 - ddr
+                rhomin = rhmin0
              else if ( iloop .eq. 2 ) then
                 tlog = tlog0
-                rhomin = rhmin0
+                rhomin = rhmin0 - ddr
              else if ( iloop .eq. 3 ) then
                 tlog = tlog0
                 rhomin = rhmin0 + ddr
@@ -1380,8 +1386,8 @@ c
 c
  9001 format(' error in s/r tdtab: wrong density on isotherm, ',
      . 'it,irho,r10,rholog,deltr = ',/1x,2i10,1p3g15.6)
- 9004 format(' end pulling to intermediate rho: tlog,rholog= ',
-     . 2f10.6)
+c 9004 format(' end pulling to intermediate rho: tlog,rholog= ',
+c     . 2f10.6)
  9901 format(' error in s/r tdtab: starting density to high, ',
      . 'in pulling: tlog,rholog = ',/1x,2f10.6)
  9902 format(' error in s/r tdtab: impossible starting point ',
