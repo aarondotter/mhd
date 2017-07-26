@@ -13,8 +13,10 @@ program test_MHD
   double precision :: dlnE_dlnT, dlnE_dlnd, d2lnE_dlnd_dlnT
   double precision :: dlnS_dlnT, dlnS_dlnd, d2lnS_dlnd_dlnT
 
+  double precision :: X, Z
+  
   character(len=128) :: arg_str
-  integer :: i
+  integer :: i, ierr
   logical :: doing_1st_call = .true.
 
   
@@ -25,14 +27,20 @@ program test_MHD
 
   double precision, parameter :: ln10 = 2.3025850929940455D0 ! = log(10d0)
 ! default values
-      results_filename = 'test.data'
-      log_filename = 'mhd.log'
-      abund_filename = 'abun_z_0.02.dat'
+  results_filename = 'test.data'
+  log_filename = 'mhd.log'
+  abund_filename = 'abun.dat'
+
+  X=0.73d0
+  Z=0.02d0
+  call write_abun_file(99, X, Z, abund_filename, ierr)
+  if(ierr/=0) stop 'problem in write_abun_file'
+
   
   if (do_test_for_Bill) then
      call get_results( &
          6.425d0, 2.6d0, 2.6d0, 0.8d0, &
-         'test.data', 'mhd.log', 'abun_z_0.02.dat')
+         'test.data', 'mhd.log', abund_filename)
      !call get_results( &
      !    6.425d0, -9.4d0, 2.6d0, 0.8d0, &
      !    'test.data', 'mhd.log', 'abun_z_0.02.dat')
@@ -62,6 +70,103 @@ program test_MHD
   
 contains
 
+  subroutine write_abun_file(io,X,Z,abunfile,ierr)
+    integer, intent(in) :: io
+    double precision, intent(in) :: X, Z
+    character(len=132), intent(out) :: abunfile
+    integer, intent(out) :: ierr
+    integer, parameter :: n_elem = 7 !7 to add Fe
+    integer :: i, j, num_levels, levels(n_elem), atomic_number(n_elem)
+    double precision :: Zmet(n_elem-2), num_frac(n_elem), mass_frac(n_elem)
+    double precision :: weight(n_elem), Y
+    character(len=4) :: id(n_elem)
+
+    ierr=0        
+    num_frac = 0d0
+    mass_frac = 0d0    
+
+
+    !check valid range of X, Z
+    if(X+Z > 1d0 .or. X+Z < 0d0) then
+       ierr=-1
+       write(*,*) ' X+Z out of range! '
+       write(*,*) ' X = ', X
+       write(*,*) ' Z = ', Z
+       write(*,*) ' X + Z = ', X+Z
+       return
+    elseif(X>1d0.or.X<0d0)then
+       ierr=-1
+       write(*,*) 'X out of range!'
+       write(*,*) ' X = ', X
+    elseif(Z>1d0.or.Z<0d0)then
+       ierr=-1
+       write(*,*) 'Z out of range!'
+       write(*,*) ' Z = ', Z
+    endif
+    
+                    ! H He  C  N  O  Ne  Fe
+    atomic_number = [ 1, 2, 6, 7, 8, 10, 26]
+    levels        = [ 3, 2, 6, 7, 8, 10, 26]
+    id = ['hydr', 'heli', 'carb', 'nitr', 'oxyg', 'neon', 'iron' ]
+    weight = [ 1.0079d0, 4.0026d0, 12.011d0, 14.0067d0, 15.9994d0, 20.179d0, 55.847d0]
+
+! from https://opalopacity.llnl.gov/EOS_2005/README    
+!		XC= 0.2471362
+!		XN= 0.0620778
+! 		XO= 0.528368 
+!		XNe=0.1624178
+              !C             N            O             Ne              Fe
+    Zmet = [ 2.4713625d-1, 6.207781d-2, 5.2836811d-1, 1.6241783d-1, 1.0d-20 ]
+
+
+    !calculate mass fractions then number fractions
+    Y = 1d0 - X - Z
+    mass_frac(1) = X
+    mass_frac(2) = Y
+    mass_frac(3:n_elem) = Z*Zmet
+
+    mass_frac = mass_frac/sum(mass_frac)
+
+    num_frac = mass_frac/weight
+
+    num_frac = num_frac/sum(num_frac)
+    
+    !write abun file
+    abunfile = 'abun.dat'
+    open(io,file=trim(abunfile),status='unknown')
+    write(io,'(a)') 'full partition functions: h-fe'
+    write(io,'(i5)') n_elem
+
+    !have to treat H separately
+    write(io,'(2x,a4,2i5,f10.4,1pe15.8)') id(1), atomic_number(1), levels(1)+2, &
+         weight(1), num_frac(1)
+    !other elements normal
+    do i =2, n_elem
+       write(io,'(2x,a4,2i5,f10.4,1pe15.8)') id(i), atomic_number(i), levels(i)+1, &
+            weight(i), num_frac(i)
+    enddo
+    
+    num_levels = sum(levels)
+    write(io,'(i5)') num_levels
+
+    
+    do i = 1, n_elem
+       if(i==1)then
+          write(io,'(2i5)') i, 1
+          write(io,'(2i5)') i, 2
+          write(io,'(2i5)') i, 4
+       else
+          do j=1,levels(i)
+             write(io,'(2i5)') atomic_number(i), j
+          enddo
+       endif
+    enddo
+
+    close(io)
+    
+  end subroutine write_abun_file
+
+  
 
    subroutine get_results( &
          logT_in, logRho_min, logRho_max, dlogRho, &

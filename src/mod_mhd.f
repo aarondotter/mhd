@@ -384,6 +384,7 @@ c***********************************************************************
       include 'types'
       include 'parms'
       include 'coms'
+
       dimension imap(mmap), jmap(mmap), spdata(mspdat), pfdata(mpfdat)
 
       equivalence ( imap, nchem ), ( spdata, smass ), ( pfdata, nlev )
@@ -425,18 +426,19 @@ c     atomic weight, abundance.  compute total number of particle
 c     species (including electrons).
       nspes = 1
       do kchem = 1, nchem
-         read   ( iin, '(2x,a4,2i5,f10.2,e10.2)' )
+         read   ( iin, '(2x,a4,2i5,f10.4,e15.8)' )
      >        name(kchem), nucz(kchem), nion(kchem),
      >        atwt(kchem), abun(kchem)
 
-c         write(6,*) 'kchem, atwt, abun =',kchem, atwt(kchem),
-c    *        abun(kchem)
+         write(6,*) 'kchem, atwt, abun =',kchem, atwt(kchem),abun(kchem)
+
          nspes = nspes + nion(kchem)
       enddo
-      
+
 c     normalize abundances
       abun = abun/sum(abun(1:nchem))
 
+     
 c     mean molecular weight
       gasmu = dot_product(abun(1:nchem),atwt(1:nchem))
 
