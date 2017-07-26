@@ -110,13 +110,8 @@ contains
     id = ['hydr', 'heli', 'carb', 'nitr', 'oxyg', 'neon', 'iron' ]
     weight = [ 1.0079d0, 4.0026d0, 12.011d0, 14.0067d0, 15.9994d0, 20.179d0, 55.847d0]
 
-! from https://opalopacity.llnl.gov/EOS_2005/README    
-!		XC= 0.2471362
-!		XN= 0.0620778
-! 		XO= 0.528368 
-!		XNe=0.1624178
               !C             N            O             Ne              Fe
-    Zmet = [ 2.4713625d-1, 6.207781d-2, 5.2836811d-1, 1.6241783d-1, 1.0d-20 ]
+    Zmet = [ 1.906614d-1, 5.58489d-2, 5.429784d-1, 2.105114d-1,   1.0d-12]
 
 
     !calculate mass fractions then number fractions
@@ -661,8 +656,8 @@ contains
       Cp = res(1,j); j=j+1
       Cv = res(1,j); j=j+1
       Gamma_1 = res(1,j); j=j+1
-      Gamma_2 = res(1,j); j=j+1
       Gamma_3 = res(1,j); j=j+1
+      mu = res(1,j); j=j+1
       f_H_plus1 = res(1,j); j=j+1
       f_He_plus1 = res(1,j); j=j+1
       f_He_plus2 = res(1,j); j=j+1
@@ -673,7 +668,7 @@ contains
       
       if (io <= 0) return
 
-      mu = 0
+      Gamma_2 = 0d0
       log_free_e = 0
       T = 10d0**logT
       rho = 10d0**logRho

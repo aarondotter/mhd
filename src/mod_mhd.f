@@ -301,6 +301,7 @@ c
       include 'tabparms'
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
+      double precision mu, ne, ni
       dimension var(ntm,nrm,ivar1),tl(ntm)
 c
       common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
@@ -319,6 +320,7 @@ c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       umod   = log(10.d0)
       carad = 7.56567d-15
+      camu = 1.6605655d-24
 c
       tlog = tlg_array(1)
       T = exp(umod*tlog)
@@ -332,10 +334,15 @@ c
       endif
 c
       do m=1,nrho
+         rhol = rhomin_array(1) + dfloat(m-1)*drho
+         rho = exp(rhol*umod)
+         ni = tnpun_array(m,1)
+         ne = elpun_array(m,1)*ni
+         mu=(rho/camu)/(ne+ni)
 c     
 c............ quantities for table ................
 c
-         var(n,m, 1) = rhomin_array(1) + dfloat(m-1)*drho
+         var(n,m, 1) = rhol
          var(n,m, 2) = slg_array(m,1)
          var(n,m, 3) = etlg_array(m,1)
          var(n,m, 4) = chirh_array(m,1)
@@ -344,7 +351,10 @@ c
          var(n,m, 7) = sglg_array(m,1)
          var(n,m, 8) = 1.d0 - 1.d0/gm2_array(m,1)
          var(n,m, 9) = csbp_array(m,2)
-
+         var(n,m,10) = csbv_array(m,1)
+         var(n,m,11) = gm1_array(m,1)
+         var(n,m,12) = gm3_array(m,1)
+         var(n,m,13) = mu
      
          var(n,m,14) = frp1_array(m,1)
          var(n,m,15) = frp2_array(m,1)
@@ -354,16 +364,6 @@ c
          var(n,m,19) = carad*T*T*T*T/3.0d0
          var(n,m,20) = pglg_array(m,1)
 
-         csubv       = csbv_array(m,1)
-         gam2        = gm2_array(m,1)
-         gam3        = gm3_array(m,1)
-         qadb        = qdb_array(m,1)
-         gam1        = gm1_array(m,1)
-
-         var(n,m,10) = csubv
-         var(n,m,11) = gam1
-         var(n,m,12) = gam2
-         var(n,m,13) = gam3
       enddo
 
       return
