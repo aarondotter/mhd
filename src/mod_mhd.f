@@ -426,7 +426,7 @@ c     atomic weight, abundance.  compute total number of particle
 c     species (including electrons).
       nspes = 1
       do kchem = 1, nchem
-         read   ( iin, '(2x,a4,2i5,f10.4,e15.8)' )
+         read   ( iin, '(2x,a4,2i5,f10.4,1pe15.8)' )
      >        name(kchem), nucz(kchem), nion(kchem),
      >        atwt(kchem), abun(kchem)
 
