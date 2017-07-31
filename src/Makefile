@@ -17,11 +17,19 @@ test: test_MHD.o $(LIB)
 table: table.o $(LIB)
 	$(FC) -o ../table $^
 
+lvlfil: lvlfil.o cray_emul.o
+	$(FC) -o ../lvlfil $^
+
+eosfil: eosfil.o cray_emul.o
+	$(FC) -o ../eosfil $^
+
 all: test table
 
 test_MHD.o: $(LIB)
 
 table.o: $(LIB)
+
+#lvlfil.o: lvlfil.f
 
 %.o: %.f
 	$(FC) $(FLAGS) -c $<
