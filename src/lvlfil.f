@@ -298,7 +298,7 @@ c     declare unit numbers
 c
       itty  = 4
       iin   = 5
-      open( unit = iin, file = 'lvlfil.dat', status='old' )
+      open( unit = iin, file = 'data/lvlfil.dat', status='old' )
       iout  = 6
 c
 c     open terminal

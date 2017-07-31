@@ -5,8 +5,8 @@ c---------------------------------------------------------------------
 c---------------------------------------------------------------------
 c
       program eosfil
-      implicit real*8 (a-h,o-z), integer*4 (i-n)
-      real*8 nlev,ionh2,ionatm,nlvls8
+      implicit double precision (a-h,o-z), integer*4 (i-n)
+      double precision nlev,ionh2,ionatm,nlvls8
       character*8 hdr,dsna,dsne
 
 c
@@ -26,7 +26,8 @@ c
       parameter ( mi = 30, mspv = 50 )
 c
       character*4 name(mchem)
-      integer nucz(mchem), nion(mchem), atwt(mchem)
+      integer nucz(mchem), nion(mchem)
+      double precision atwt(mchem)
       
 c      common /atoms /
 c     .                         name  (mchem ),        nucz  (mchem ),
@@ -150,7 +151,7 @@ c     read name, nuclear charge, number of molecule/atom/ion species,
 c     atomic weight for element kchem.
       read   ( iin, 7 ) name(kchem), nucz(kchem), nion(kchem),
      .                  atwt(kchem)
-    7 format ( 2x, a4, 2i5, f10.2 )
+    7 format ( 2x, a4, 2i5, f10.4 )
 c
 c     accumulate total number of particle species (including electrons).
       nspes = nspes + nion(kchem)
@@ -570,7 +571,7 @@ c
       stop'normal termination'
       end
       subroutine clzfil
-      implicit real*8 (a-h,o-z), integer*4 (i-n)
+      implicit double precision (a-h,o-z), integer*4 (i-n)
 c ----- open and close statements require plain-vanilla integer variables
       integer iera,iere
 c***********************************************************************
@@ -607,7 +608,7 @@ c
       return
       end
       subroutine opnfil
-      implicit real*8 (a-h,o-z), integer*4 (i-n)
+      implicit double precision (a-h,o-z), integer*4 (i-n)
 c ----- open and close statements require plain-vanilla integer variables
       integer ier
 c***********************************************************************
