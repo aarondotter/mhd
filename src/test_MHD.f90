@@ -28,9 +28,9 @@ program test_MHD
   call write_abun_file(99, X, Z, abund_filename, ierr)
   if(ierr/=0) stop 'problem in write_abun_file'
 
-  logT_max = 8.0d0
-  logT_min = 3.0d0
-  dlogT = 0.5d0
+  logT_max = 8.3d0
+  logT_min = 3.3d0
+  dlogT = 0.05d0
   dlogRho = 1.0d0
   logRho_min = -4.0d0
   logRho_max = -4.0d0
@@ -136,7 +136,6 @@ contains
        logT_min, logT_max, dlogT, logRho_min, logRho_max, dlogRho, &
        results_file, abund_file)
     double precision, intent(in) :: logT_min, logT_max, logRho_min, logRho_max, dlogRho, dlogT
-    double precision :: logT, logRho
     character (len=*) , intent(in):: results_file, abund_file
     integer, parameter :: io = 22
     integer :: i, j, nT, nR
@@ -196,7 +195,7 @@ contains
     write(*,*)
 
     open(unit=io, file=trim(results_filename))
-    call write_logT_header(logT, io)
+    call write_logT_header(io)
 
     do i=1,nT
        logT = logT_min + dble(i-1)*dlogT
@@ -225,7 +224,7 @@ contains
     double precision, intent(out) :: d_dlnT, d_dlnd, d2_dlnd_dlnT
     double precision :: hx, hy, err_d_dlnd, err_d_dlnT, err_d2_dlnd_dlnT, err_tol
     logical, parameter :: do_2nd_partial = .false.
-    logical, parameter :: do_1st_partial = .false.
+    logical, parameter :: do_1st_partial = .true.
 
     lnT = logT*ln10
     lnd = logRho*ln10
@@ -597,12 +596,8 @@ contains
   end subroutine table_for_Bill
 
 
-  subroutine write_logT_header(logT, io)
-    double precision, intent(in) :: logT
+  subroutine write_logT_header( io)
     integer, intent(in) :: io
-!    write(io,'(a22)') 'logT'
-!    write(io,'(1p99e22.14)') logT
-!    write(io,*)
     write(io,'(99a22)') 'logT', &
          'logRho', 'logPgas', 'logE', 'logS', 'dlnPgas_dlnT', 'dlnPgas_dlnd', &
          'd2lnPgas_dlnd_dlnT', 'dlnE_dlnT', 'dlnE_dlnd', 'd2lnS_dlnd_dlnT', &

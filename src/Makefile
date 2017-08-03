@@ -12,7 +12,7 @@ $(LIB): $(LIB_OBJS)
 	ar crs $(LIB) $(LIB_OBJS)
 
 test: test_MHD.o $(LIB)
-	$(FC) -o ../mhd.exe $^
+	$(FC) -o ../mhd $^
 
 table: table.o $(LIB)
 	$(FC) -o ../table $^
