@@ -28,13 +28,13 @@ program test_MHD
   call write_abun_file(99, X, Z, abund_filename, ierr)
   if(ierr/=0) stop 'problem in write_abun_file'
 
-  logT_max = 8.3d0
-  logT_min = 3.3d0
+  logT_max = 8.0d0
+  logT_min = 8.0d0
   dlogT = 0.05d0
   dlogRho = 1.0d0
-  logRho_min = -4.0d0
-  logRho_max = -4.0d0
-  results_filename='test_logRho-4_varyT.data'
+  logRho_min = 2.0d0
+  logRho_max = 2.0d0
+  results_filename='test_logRho2_logT8.data'
 
   call get_results( &
        logT_Min, logT_max, dlogT, logRho_min, logRho_max, dlogRho, &
@@ -550,49 +550,6 @@ contains
     ! logT = 3.2, logRho_min = -15, logRho_max = -1.2
     ! logT = 2.9, logRho_min = -15, logRho_max = -1.2
 
-
-!!$    !names of data files for MHD
-!!$    datafile='eosdat07'
-!!$    outfile = 'eosMHD.data'
-!!$
-!!$    dlogRho = 0.8d0
-!!$    n = floor((logRho_max - logRho_min)/dlogRho + 1d-6) + 1
-!!$    write(*,*) 'logRho_min', logRho_min
-!!$    write(*,*) 'logRho_max', logRho_max
-!!$    write(*,*) 'dlogRho', dlogRho
-!!$    write(*,*) 'n', n
-!!$    write(*,*)
-!!$
-!!$    allocate(logTs(n), logRhos(n))
-!!$    allocate(res(n, nres))
-!!$
-!!$    logTs(1:n) = logT
-!!$    do j=1,n
-!!$       logRhos(j) = logRho_min + dble(j-1)*dlogRho
-!!$       write(*,*) 'logRhos(j)', j, logRhos(j)
-!!$    enddo
-!!$
-!!$    write(*,*) 'read in data files'
-!!$    !read in data files
-!!$    call mhd_init(datafile,abund_filename)
-!!$
-!!$    write(*,*) 'process T,Rho arrays through MHD'
-!!$    !process T,Rho arrays through MHD
-!!$    call eosDT_get( logTs, logRhos, res)
-!!$
-!!$    write(*,*) 'write results ', trim(outfile)
-!!$    io = 22 !unit for output table
-!!$    open( unit=io , file=trim(outfile))
-!!$    call write_result(io,logTs,res)      
-!!$    close(io)
-!!$
-!!$    write(*,*)
-!!$    do j=1,n
-!!$       write(*,*) 'logRhos(j)', j, logRhos(j)
-!!$    enddo
-!!$    write(*,*) 'logT', logT
-!!$    write(*,*)
-
   end subroutine table_for_Bill
 
 
@@ -649,7 +606,6 @@ contains
     log_free_e = 0
     T = 10d0**logT
     rho = 10d0**logRho
-    Prad = Prad/rho
     Pgas = 10d0**logPgas_res
     Egas = 10d0**logEgas_res
     gas_gamma = rho*Egas/Pgas + 1d0
