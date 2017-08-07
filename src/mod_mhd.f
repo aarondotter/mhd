@@ -18,6 +18,8 @@ c---------------------------------------------------------------------
       call openfile(datafile,abunfile)
 
       call setup
+
+      call closefiles
       
       end subroutine mhd_init
 
@@ -31,8 +33,6 @@ c---------------------------------------------------------------------
       call tdfill
 
       call outtab(result)
-      
-      call closefiles
           
       end subroutine eosDT_get
       
