@@ -205,17 +205,6 @@ c>>>>>>>>>>>>>>>>>>>>>> only part of mhd common needed <<<<<<<<<<<<<<<<
      .                                ipunch ,               ifracs ,
      .                                ipops  ,               idat
 
-c>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-c
-!      dimension atwt (mchem),abun (mchem)
-c
-c....................................................................
-c
-!      rewind ipunch
-c
-!      read(ipunch, *) nchem,(atwt(ic),abun(ic),ic=1,nchem),gasmu
-      
-!      read ( ipunch, *, iostat = ier ) nt, nr, drho, ddt, ddr
 
 c======================================================================
       call rpun(nt2,nr2,drho)
@@ -253,42 +242,12 @@ c ------ varspc for various quantities (with the possibility
 c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       do n=1,nt
-!         do j=1,5
-!            read( ipunch, * )      nrho_array(j),iloopi_array(j),
-!     .             tlg_array(j),rhomin_array(j),
-!     .             (elg_array  (i,j), i= 1, nrho), 
-!     .             (pglg_array (i,j), i= 1, nrho),
-!     .             (pelg_array (i,j), i= 1, nrho), 
-!     .             (ptlg_array (i,j), i= 1, nrho),
-!     .             (etlg_array (i,j), i= 1, nrho), 
-!     .             (csbv_array (i,j), i= 1, nrho),
-!     .             (csbp_array (i,j), i= 1, nrho), 
-!     .             (chirh_array(i,j), i= 1, nrho),
-!     .             (cht_array  (i,j), i= 1, nrho), 
-!     .             (gm1_array  (i,j), i= 1, nrho),
-!     .             (gm2_array  (i,j), i= 1, nrho), 
-!     .             (gm3_array  (i,j), i= 1, nrho),
-!     .             (qdb_array  (i,j), i= 1, nrho),
-!     .             (frp1_array (i,j), i= 1, nrho), 
-!     .             (frp2_array (i,j), i= 1, nrho),
-!     .             (frp3_array (i,j), i= 1, nrho), 
-!     .             (frp4_array (i,j), i= 1, nrho),
-!     .             (elpun_array(i,j), i= 1, nrho), 
-!     .             (etapun_array(i,j),i= 1, nrho),
-!     .             (eltpun_array(i,j),i= 1, nrho), 
-!     .             (elrpun_array(i,j),i= 1, nrho),
-!     .             (tnpun_array (i,j),i= 1, nrho),
-!     .             ( (varspc_array(ivspc,i,j), 
-!     .                  ivspc=1,mvspc),  i= 1, nrho)
-!         enddo
-
          if(nrho_array(1).ne.nrho) then
             write(*,*) 'nrho_array(1)', nrho_array(1)
             write(*,*) 'nrho', nrho
             stop ' mismatch of density points in rpun '
          end if
          
-         !stop 'rpun'
          call rpun1(n,nrho,var2,tl2,nt2m,nr2m,ivar,drho)
       enddo
 
@@ -301,7 +260,7 @@ c
       include 'tabparms'
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
-      double precision mu, ne, ni
+      double precision mu, mu_i, mu_e
       dimension var(ntm,nrm,ivar1),tl(ntm)
 c
       common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
@@ -336,10 +295,12 @@ c
       do m=1,nrho
          rhol = rhomin_array(1) + dfloat(m-1)*drho
          rho = exp(rhol*umod)
-         ni = tnpun_array(m,1)
-         ne = elpun_array(m,1)*ni
-         mu=(rho/camu)/(ne+ni)
-c     
+c
+         mu_i = tnpun_array(m,1)
+         mu_e = elpun_array(m,1)
+         mu = (mu_e*mu_i)/(mu_e+mu_i)
+         write(*,*) mu_i, mu_e, mu
+         
 c............ quantities for table ................
 c
          var(n,m, 1) = rhol
@@ -497,11 +458,11 @@ c     species numbers of electrons and of hydrogen molecules/atoms/ions
       ise = nspes
       kh  = kz(1)
       if ( kh .gt. 0 ) then
-            ish2  = ichm1(kh)
-      ish2p = ish2  + 1
-      ishm  = ish2p + 1
-      ish   = ishm  + 1
-      ispr  = ish   + 1
+         ish2  = ichm1(kh)
+         ish2p = ish2  + 1
+         ishm  = ish2p + 1
+         ish   = ishm  + 1
+         ispr  = ish   + 1
       end if
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -643,7 +604,7 @@ c***********************************************************************
 c
       dimension d2fdlt(mlam), d2fdlv(mlam), d2fdl2(mlam, mlam)
       dimension dnedni(mspes), dnedl(mlam)
-      dimension res2(mlam,2)
+      dimension res2(mlam,2), fracmass(nchem)
       equivalence (d2fdlt, d2zdnt), (d2fdlv, d2zdnv), (d2fdl2, d2zdn2)
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -695,21 +656,65 @@ c
 c     save old values from previous point on isotherm
       if ( irho .gt. 1 ) call scopy( mion*mz, frac, 1, fraco, 1 )
 c
+
+      smu_inv = 0d0
+      smu_e_inv = 0d0
+      fracmass = abun(1:nchem)*atwt(1:nchem)
+      sum_frac_mass = 0d0
+      do kchem = 1, nchem
+         sum_frac_mass = sum_frac_mass + fracmass(kchem)
+      enddo
+      fracmass = fracmass / sum_frac_mass
+      
 c     generate current values
-      do 2 kchem = 1, nchem
-      is1 = ichm1(kchem)
-      is2 = ichm2(kchem)
-      kk  = nucz (kchem)
-      sum = ssum( nion(kchem), sn(is1), 1 )
+      do kchem = 1, nchem
+         is1 = ichm1(kchem)
+         is2 = ichm2(kchem)
+         kk  = nucz (kchem)
+         sum = ssum( nion(kchem), sn(is1), 1 )
 c     allow for hydrogen molecules
-      if ( kk .eq. 1 ) sum = sum + sn(ish2) + sn(ish2p)
+         if ( kk .eq. 1 ) sum = sum + sn(ish2) + sn(ish2p)
 c
-      do 1 is = is1, is2
-      jion = is - is1 + 1
-      frac(jion, kk) = sn(is) / sum
-    1 continue
-c
-    2 continue
+         do is = is1, is2
+            jion = is - is1 + 1
+            frac(jion, kk) = sn(is) / sum
+            if (kk==1) then !Hydrogen
+c here we calculate inverses of mu_ion and mu_electron via sums
+               if(is==ish2)then !H2
+                  smu_inv = smu_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+               elseif(is==ish2p)then !H2+
+                  smu_inv = smu_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+                  smu_e_inv = smu_e_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)/2d0
+               elseif(is==ishm)then !H-
+                  smu_inv = smu_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+                  smu_e_inv = smu_e_inv -
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+               elseif(is==ish)then !H
+                  smu_inv = smu_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+               elseif(is==ispr)then !H+
+                  smu_inv = smu_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+                  smu_e_inv = smu_e_inv +
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+               endif                  
+            else
+               smu_inv = smu_inv +
+     >              fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+               smu_e_inv = smu_e_inv +
+     >           dble(jion-1)*fracmass(kchem)*frac(jion,kk)/atwt(kchem)
+            endif
+         enddo
+      enddo
+
+c     invert to get mu_i and mu_e
+      smu = 1d0/smu_inv
+      smu_e = 1d0/smu_e_inv
+      
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 c     save electron fraction, total number of nuclei, log temperature, c
@@ -811,9 +816,7 @@ c-----------------------------------------------------------------------
 c     c sub v                                                          c
 c-----------------------------------------------------------------------
 c
-      do 8 ilam=1,nlam
-      fscr(ilam)=res2(ilam,1)
-   8  continue
+      fscr(ilam:nlam) = res2(ilam:nlam,1)
 c
    9  csubv(irho) = -t * ( d2fdt2 - sdot(nlam, d2fdlt, 1, fscr, 1) )
      .                 / ( rho * vol )
@@ -894,8 +897,8 @@ c     eta, total number of nuclei and electrons
 c-----------------------------------------------------------------------
 c
       etapun(irho)   = eta
-      tnpun (irho)   = totn
-      elpun (irho)   = frac( mion - 3 , 1 )
+      tnpun (irho)   = smu   !totn
+      elpun (irho)   = smu_e !frac( mion - 3 , 1 )
 c ----- additional variables for entropy (or cv,cp) to be put in varspc
 cccc  varspc(1,irho) = etot
 cccc  varspc(2,irho) = ftot
