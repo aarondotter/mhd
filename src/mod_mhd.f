@@ -279,7 +279,6 @@ c ------ to obtain derivatives, therefore here and not in s/r outp0-3).
 c
       umod   = log(10.d0)
       carad = 7.56567d-15
-      camu = 1.6605655d-24
 c
       tlog = tlg_array(1)
       T = exp(umod*tlog)
@@ -299,7 +298,6 @@ c
          mu_i = tnpun_array(m,1)
          mu_e = elpun_array(m,1)
          mu = (mu_e*mu_i)/(mu_e+mu_i)
-         write(*,*) mu_i, mu_e, mu
          
 c............ quantities for table ................
 c
@@ -687,7 +685,7 @@ c here we calculate inverses of mu_ion and mu_electron via sums
                   smu_inv = smu_inv +
      >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
                   smu_e_inv = smu_e_inv +
-     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)/2d0
+     >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
                elseif(is==ishm)then !H-
                   smu_inv = smu_inv +
      >                 fracmass(kchem)*frac(jion,kk)/atwt(kchem)
