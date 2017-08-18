@@ -11,11 +11,11 @@ program test_MHD
 
   double precision :: X, Z, Y
 
-  integer :: ierr, i, io, nz, i1, i2
+  integer :: ierr, i, io, nz, i2
   logical :: doing_1st_call = .true.
   character(len=128) :: arg_str, datafile
 
-
+  logical, parameter :: write_table_format = .false.
   logical :: doing_d_dlnd, check_point_in_solar_model
   double precision :: lnd, lnT, logT, logRho, &
        logRho_min, logRho_max, logT_min, logT_max, dlogT, dlogRho, logQ_max, &
@@ -32,21 +32,18 @@ program test_MHD
 
   double precision, parameter :: ln10 = 2.3025850929940455D0 ! = log(10d0)
 
-  Z=0.001d0
-  Z=1
+  !Z=0.001d0
+  !Z=1
   Z=0.02d0
 
-  X=0.999d0
-  X=0.0d0
+  !X=0.999d0
+  !X=0.0d0
 
-  X=0.70d0 
-  X=0.00d0
-  X=0.98d0
+  !X=0.98d0 
+  !X=0.00d0
+  X=0.70d0
 
-  i1=672
-  i2=222
-
-  check_point_in_solar_model = .true.
+  check_point_in_solar_model = .false.
 
   datafile='eosdat06'
 
@@ -59,7 +56,7 @@ program test_MHD
         read(io,*) r, cs_data, cs_mesa, cs_S09, logRho_opal, logT_opal, h1, he3, he4, logP_opal, &
              gamma1_opal, logPgas_opal, logE_opal, logS_opal, grad_ad_opal, &
              chiT_opal, chiRho_opal, cp_opal, cv_opal
-        if (i == i1) exit
+        if (i == 672) exit
      end do
      close(io)
      X = h1
@@ -97,27 +94,27 @@ program test_MHD
   else if (i == 1) then
      logT_min = 3.0d0
      logT_max = 4.0d0
-     dlogT = 0.5d0
-     logRho_max = -2.0d0
-     logRho_min = -15.0d0
+     dlogT = 0.1d0
+     logRho_min = -14.0d0
+     logRho_max = -1.0d0
      dlogRho = 1.0d0
      call get_filename(Z,X,results_filename,'mesa','low_T',ierr)
      if (ierr /= 0) stop 'error in get_filename'
   else if (i == 2) then
      logT_min = 4.0d0
      logT_max = 6.0d0
-     dlogT = 0.5d0
+     dlogT = 0.1d0
      logRho_max = 3d0
      logRho_min = -13.0d0
      dlogRho = 1.0d0
      call get_filename(Z,X,results_filename,'mesa','mid_T',ierr)
      if (ierr /= 0) stop 'error in get_filename'
   else
-     logT_min = 6.0d0
-     logT_max = 8.0d0
+     logT_min = 7.0d0 !6.0d0
+     logT_max = 7.0d0 !8.0d0
      dlogT = 0.5d0
-     logRho_max = 3d0
-     logRho_min = -11.0d0
+     logRho_max = -5.0d0 !3d0
+     logRho_min = -5.0d0 !-11.0d0
      dlogRho = 1.0d0
      call get_filename(Z,X,results_filename,'mesa','high_T',ierr)
      if (ierr /= 0) stop 'error in get_filename'
@@ -147,8 +144,10 @@ program test_MHD
 
 
 !!!!TEST!!!!
-  if (check_point_in_solar_model) then
-     io = 20
+  if (.false. .and. check_point_in_solar_model) then
+     io=20
+     i2=77
+     open(unit=i2, file='results.txt')
      open(unit=io, file='solar_model_comparison.data', status='OLD')
      read(io,*) nz
      read(io,*) ! text
@@ -156,49 +155,61 @@ program test_MHD
         read(io,*) r, cs_data, cs_mesa, cs_S09, logRho_opal, logT_opal, h1, he3, he4, logP_opal, &
              gamma1_opal, logPgas_opal, logE_opal, logS_opal, grad_ad_opal, &
              chiT_opal, chiRho_opal, cp_opal, cv_opal
-        if (i == i2) exit
-     end do
+
+        if(mod(i,50)/=1) cycle
+        
+        X = h1
+        Y = he3 + he4
+        Z = 1d0 - (X + Y)
+        logT_min = logT_opal
+        logT_max = logT_opal
+        dlogT = 1d0
+        logRho_max = logRho_opal
+        logRho_min = logRho_opal
+        dlogRho = 1d0
+        cs_data = cs_data*1d5 ! convert to cm/s
+        cs_mesa = cs_mesa*1d5 ! convert to cm/s
+        cs_S09 = cs_S09*1d5 ! convert to cm/s
+        
+        call write_abun_file(99, X, Z, abund_filename, metals_str, ierr)
+        if(ierr/=0) stop 'problem in write_abun_file'
+        
+        doing_1st_call = .true.
+        
+        call get_filename(Z,X,results_filename,'mesa','solar_model_point',ierr)
+        results_filename='junk'
+        if (ierr /= 0) stop 'error in get_filename'
+        
+
+        call get_results( &
+             logT_Min, logT_max, dlogT, logRho_min, logRho_max, dlogRho, logQ_max, &
+             results_filename, abund_filename)
+
+        write(*,*)
+        write(*,'(a15,1p99e22.14)') 'radius', r
+        write(*,'(a15,1p99e22.14)') 'logRho', logRho_min
+        write(*,'(a15,1p99e22.14)') 'logT', logT_min
+        write(*,'(a15,1p99e22.14)') 'X', X
+        write(*,'(a15,1p99e22.14)') 'Z', Z
+        write(*,'(15x,99a22)') 'cs', '(cs-Sun)/Sun', 'logPgas', 'logE', 'logS', 'gamma1', 'grad_ad'
+        write(*,'(a15,1p99e22.14)') 'data', cs_data
+        !write(*,'(a15,1p99e22.14)') 'S09', cs_S09, (cs_S09 - cs_data)/cs_data
+        write(*,'(a15,1p99e22.14)') 'mhd', csound, (csound - cs_data)/cs_data, &
+             logPgas_res, logE_res, logS_res, gamma1, grad_ad
+        write(*,'(a15,1p99e22.14)') 'mesa/opal', cs_mesa, (cs_mesa - cs_data)/cs_data, &
+             logPgas_opal, logE_opal, logS_opal, gamma1_opal, grad_ad_opal
+        write(*,*)
+        
+        
+        write(i2,'(1p99e22.14)') r, X, Z, logRho_min, logT_min, csound, (csound - cs_data)/cs_data, &
+             logPgas_res, logE_res, logS_res, gamma1, grad_ad, cs_mesa, (cs_mesa - cs_data)/cs_data, &
+             logPgas_opal, logE_opal, logS_opal, gamma1_opal, grad_ad_opal
+     
+
+     enddo
      close(io)
-     X = h1
-     Y = he3 + he4
-     Z = 1d0 - (X + Y)
-     logT_min = logT_opal
-     logT_max = logT_opal
-     dlogT = 1d0
-     logRho_max = logRho_opal
-     logRho_min = logRho_opal
-     dlogRho = 1d0
-     cs_data = cs_data*1d5 ! convert to cm/s
-     cs_mesa = cs_mesa*1d5 ! convert to cm/s
-     cs_S09 = cs_S09*1d5 ! convert to cm/s
+     close(i2)
 
-     call write_abun_file(99, X, Z, abund_filename, metals_str, ierr)
-     if(ierr/=0) stop 'problem in write_abun_file'
-
-     doing_1st_call = .true.
-
-     call get_filename(Z,X,results_filename,'mesa','solar_model_point',ierr)
-     if (ierr /= 0) stop 'error in get_filename'
-
-
-     call get_results( &
-          logT_Min, logT_max, dlogT, logRho_min, logRho_max, dlogRho, logQ_max, &
-          results_filename, abund_filename)
-
-     write(*,*)
-     write(*,'(a15,1p99e22.14)') 'radius', r
-     write(*,'(a15,1p99e22.14)') 'logRho', logRho_min
-     write(*,'(a15,1p99e22.14)') 'logT', logT_min
-     write(*,'(a15,1p99e22.14)') 'X', X
-     write(*,'(a15,1p99e22.14)') 'Z', Z
-     write(*,'(15x,99a22)') 'cs', '(cs-Sun)/Sun', 'logPgas', 'logE', 'logS', 'gamma1', 'grad_ad'
-     write(*,'(a15,1p99e22.14)') 'data', cs_data
-     !write(*,'(a15,1p99e22.14)') 'S09', cs_S09, (cs_S09 - cs_data)/cs_data
-     write(*,'(a15,1p99e22.14)') 'mhd', csound, (csound - cs_data)/cs_data, &
-          logPgas_res, logE_res, logS_res, gamma1, grad_ad
-     write(*,'(a15,1p99e22.14)') 'mesa/opal', cs_mesa, (cs_mesa - cs_data)/cs_data, &
-          logPgas_opal, logE_opal, logS_opal, gamma1_opal, grad_ad_opal
-     write(*,*)
   end if
 
 contains
@@ -425,25 +436,28 @@ contains
     end do
 
     open(unit=io, file=trim(results_filename))
-    write(io,'(2a22,a10,4a22,a16,3a22,5x,a)') &
-         'X', 'Z', 'nlogTs', 'logT_min', 'logT_max', 'del_logT', &
-         'nlogRhos_max', 'logRho_min', 'logRho_max', 'del_logRho', &
-         'logQ_max', trim(metals_str)
-    write(io,'(2f22.6,i10,3f22.6,i16,4f22.6)') &
-         X, Z, nT, logT_min, logT_max, dlogT, &
-         jmax, logRho_min, logRho_max, dlogRho, logQ_max
-    do i=1,nT
-       logT = logT_min + dble(i-1)*dlogT
-       write(io,*)
-       write(io,'(a22,a12)') 'logT', 'nlogRhos'
-       jmax = 0
+
+    if(write_table_format)then
+       write(io,'(2a22,a10,4a22,a16,3a22,5x,a)') &
+            'X', 'Z', 'nlogTs', 'logT_min', 'logT_max', 'del_logT', &
+            'nlogRhos_max', 'logRho_min', 'logRho_max', 'del_logRho', &
+            'logQ_max', trim(metals_str)
+       write(io,'(2f22.6,i10,3f22.6,i16,4f22.6)') &
+            X, Z, nT, logT_min, logT_max, dlogT, &
+            jmax, logRho_min, logRho_max, dlogRho, logQ_max
+    endif
+       do i=1,nT
+          logT = logT_min + dble(i-1)*dlogT
+          if(write_table_format) write(io,*)
+          if(write_table_format) write(io,'(a22,a12)') 'logT', 'nlogRhos'
+          jmax = 0
        do j=1,nR
           logRho = logRho_min + dble(j-1)*dlogRho
           logQ = logRho - 2d0*logT + 12d0
           if (logQ > logQ_max) exit
           jmax = j
        end do
-       write(io,'(f22.6,i12)') logT, jmax
+       if(write_table_format) write(io,'(f22.6,i12)') logT, jmax
        call write_logT_header(io)
        do j=1,nR
           logRho = logRho_min + dble(j-1)*dlogRho
@@ -474,8 +488,8 @@ contains
     integer, intent(in) :: which
     double precision, intent(out) :: d_dlnT, d_dlnd, d2_dlnd_dlnT
     double precision :: hx, hy, err_d_dlnd, err_d_dlnT, err_d2_dlnd_dlnT, err_tol
-    logical, parameter :: do_2nd_partial = .true.
-    logical, parameter :: do_1st_partial = .true.
+    logical, parameter :: do_2nd_partial = .false.
+    logical, parameter :: do_1st_partial = .false.
 
     lnT = logT*ln10
     lnd = logRho*ln10
@@ -838,13 +852,23 @@ contains
 
   subroutine write_logT_header( io)
     integer, intent(in) :: io
-    write(io,'(99a22)') &
-         'logRho', 'logPgas', 'logE', 'logS', 'dlnPgas_dlnT', 'dlnPgas_dlnd', &
-         'd2lnPgas_dlnd_dlnT', 'dlnE_dlnT', 'dlnE_dlnd', 'd2lnS_dlnd_dlnT', &
-         'dlnS_dlnT', 'dlnS_dlnd', 'd2lnS_dlnd_dlnT', 'mu', 'log_free_e', &
-         'eta', 'f_H+', 'f_He+', 'f_He++', 'f_H2', 'csound', &
-         'Cp', 'chiRho', 'chiT', 'gamma1', 'gamma3', 'grad_ad', &
-         'dse', 'dpe', 'dsp'
+    if(write_table_format) then
+       write(io,'(99a22)') &
+            'logRho', 'logPgas', 'logE', 'logS', 'dlnPgas_dlnT', 'dlnPgas_dlnd',&
+            'd2lnPgas_dlnd_dlnT', 'dlnE_dlnT', 'dlnE_dlnd', 'd2lnS_dlnd_dlnT', &
+            'dlnS_dlnT', 'dlnS_dlnd', 'd2lnS_dlnd_dlnT', 'mu', 'log_free_e', &
+            'eta', 'f_H+', 'f_He+', 'f_He++', 'f_H2', 'csound', &
+            'Cp', 'chiRho', 'chiT', 'gamma1', 'gamma3', 'grad_ad', &
+            'dse', 'dpe', 'dsp'
+    elseif(doing_1st_call)then
+       write(io,'(99a22)') 'logT', &
+            'logRho', 'logPgas', 'logE', 'logS', 'dlnPgas_dlnT', 'dlnPgas_dlnd',&
+            'd2lnPgas_dlnd_dlnT', 'dlnE_dlnT', 'dlnE_dlnd', 'd2lnS_dlnd_dlnT', &
+            'dlnS_dlnT', 'dlnS_dlnd', 'd2lnS_dlnd_dlnT', 'mu', 'log_free_e', &
+            'eta', 'f_H+', 'f_He+', 'f_He++', 'f_H2', 'csound', &
+            'Cp', 'chiRho', 'chiT', 'gamma1', 'gamma3', 'grad_ad', &
+            'dse', 'dpe', 'dsp'
+    endif
   end subroutine write_logT_header
 
 
@@ -854,7 +878,9 @@ contains
     integer :: j
     double precision :: xx, dE_dRho, dE_dT, dP_dlnd, dP_dlnT, dP_dT, dPgas_dT, &
          dPrad_dT, dS_dRho, dS_dT, energy, entropy, P, Pgas, Prad, rho, T, &
-         logRho, logT
+         logRho, logT, n_e
+
+    double precision, parameter :: avo=6.02214179d23
 
     if (size(tl) /= 1) stop 'write_result expects size(tl) = 1'
 
@@ -871,7 +897,7 @@ contains
     Cp = res(1,j); j=j+1
     Cv = res(1,j); j=j+1
     gamma1 = res(1,j); j=j+1
-    gamma3 = res(1,j); j=j+1
+    n_e = res(1,j); j=j+1
     mu = res(1,j); j=j+1
     f_H_plus1 = res(1,j); j=j+1
     f_He_plus1 = res(1,j); j=j+1
@@ -883,7 +909,7 @@ contains
 
     T = 10d0**logT
     rho = 10d0**logRho
-    log_free_e = 0
+    log_free_e = log10(n_e/rho/avo)
     Pgas = 10d0**logPgas_res
     entropy = 10d0**logS_res
     energy = 10d0**logE_res
@@ -918,13 +944,21 @@ contains
 
     if (io <= 0) return
 
-    write(io,'(1p99e22.14)') &
-         logRho, logPgas_res, logE_res, logS_res, dlnPgas_dlnT, dlnPgas_dlnd, &
-         d2lnPgas_dlnd_dlnT, dlnE_dlnT, dlnE_dlnd, d2lnS_dlnd_dlnT, &
-         dlnS_dlnT, dlnS_dlnd, d2lnS_dlnd_dlnT, mu, log_free_e, &
-         eta, f_H_plus1, f_He_plus1, f_He_plus2, f_H2, csound, &
-         Cp, chiRho, chiT, gamma1, gamma3, grad_ad, dse, dpe, dsp
-
+    if(write_table_format)then
+       write(io,'(1p99e22.14)') &
+            logRho, logPgas_res, logE_res, logS_res, dlnPgas_dlnT, dlnPgas_dlnd,&
+            d2lnPgas_dlnd_dlnT, dlnE_dlnT, dlnE_dlnd, d2lnS_dlnd_dlnT, &
+            dlnS_dlnT, dlnS_dlnd, d2lnS_dlnd_dlnT, mu, log_free_e, &
+            eta, f_H_plus1, f_He_plus1, f_He_plus2, f_H2, csound, &
+            Cp, chiRho, chiT, gamma1, gamma3, grad_ad, dse, dpe, dsp
+    else
+       write(io,'(1p99e22.14)') logT, &
+            logRho, logPgas_res, logE_res, logS_res, dlnPgas_dlnT, dlnPgas_dlnd,&
+            d2lnPgas_dlnd_dlnT, dlnE_dlnT, dlnE_dlnd, d2lnS_dlnd_dlnT, &
+            dlnS_dlnT, dlnS_dlnd, d2lnS_dlnd_dlnT, mu, log_free_e, &
+            eta, f_H_plus1, f_He_plus1, f_He_plus2, f_H2, csound, &
+            Cp, chiRho, chiT, gamma1, gamma3, grad_ad, dse, dpe, dsp
+    endif
   end subroutine write_result
 
 end program test_MHD

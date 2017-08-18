@@ -260,7 +260,7 @@ c
       include 'tabparms'
 c ----------- ivar from tabparms is dummy variable. effective is ivar1.
 c
-      double precision mu, mu_i, mu_e
+      double precision mu, n_e
       dimension var(ntm,nrm,ivar1),tl(ntm)
 c
       common/rp1/ tlg_array(5),rhomin_array(5),elg_array(mrho,5),
@@ -295,9 +295,9 @@ c
          rhol = rhomin_array(1) + dfloat(m-1)*drho
          rho = exp(rhol*umod)
 c
-         mu_i = tnpun_array(m,1)
-         mu_e = elpun_array(m,1)
-         mu = (mu_e*mu_i)/(mu_e+mu_i)
+         mu = tnpun_array(m,1)
+         n_e = elpun_array(m,1)
+
          
 c............ quantities for table ................
 c
@@ -312,7 +312,7 @@ c
          var(n,m, 9) = csbp_array(m,2)
          var(n,m,10) = csbv_array(m,1)
          var(n,m,11) = gm1_array(m,1)
-         var(n,m,12) = gm3_array(m,1)
+         var(n,m,12) = n_e
          var(n,m,13) = mu
      
          var(n,m,14) = frp1_array(m,1)
@@ -710,8 +710,7 @@ c here we calculate inverses of mu_ion and mu_electron via sums
       enddo
 
 c     invert to get mu_i and mu_e
-      smu = 1d0/smu_inv
-      smu_e = 1d0/smu_e_inv
+      smu = 1d0/(smu_inv + smu_e_inv)
       
 c
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -895,8 +894,8 @@ c     eta, total number of nuclei and electrons
 c-----------------------------------------------------------------------
 c
       etapun(irho)   = eta
-      tnpun (irho)   = smu   !totn
-      elpun (irho)   = smu_e !frac( mion - 3 , 1 )
+      tnpun (irho)   = smu   
+      elpun (irho)   = sne(irho)
 c ----- additional variables for entropy (or cv,cp) to be put in varspc
 cccc  varspc(1,irho) = etot
 cccc  varspc(2,irho) = ftot
